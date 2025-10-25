@@ -26,7 +26,7 @@ const amenityIcons: Record<string, any> = {
 
 export default async function DashboardRoomDetailsPage({ params }: RoomDetailsPageProps) {
   const session = await getServerSession(authOptions);
-  
+
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -85,7 +85,7 @@ export default async function DashboardRoomDetailsPage({ params }: RoomDetailsPa
             Back to Rooms
           </Button>
         </Link>
-        
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">{room.name}</h1>
@@ -136,17 +136,17 @@ export default async function DashboardRoomDetailsPage({ params }: RoomDetailsPa
                 <span className="font-medium">Room ID:</span>
                 <code className="text-sm bg-muted px-2 py-1 rounded">{room.id}</code>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="font-medium">Room Type:</span>
                 <Badge variant="secondary">{room.roomType}</Badge>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="font-medium">Price per night:</span>
                 <span className="text-2xl font-bold text-primary">${room.price}</span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="font-medium">Max Occupancy:</span>
                 <div className="flex items-center">
@@ -154,7 +154,7 @@ export default async function DashboardRoomDetailsPage({ params }: RoomDetailsPa
                   <span>{room.maxOccupancy || 2} guests</span>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="font-medium">Availability:</span>
                 <span className={`font-medium ${room.available > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -282,11 +282,11 @@ export default async function DashboardRoomDetailsPage({ params }: RoomDetailsPa
                         by {bookingRoom.booking.user.name || bookingRoom.booking.user.email}
                       </span>
                     </div>
-                    <Badge 
+                    <Badge
                       variant={
                         bookingRoom.booking.status === 'CONFIRMED' ? 'default' :
-                        bookingRoom.booking.status === 'PENDING' ? 'secondary' :
-                        bookingRoom.booking.status === 'CANCELLED' ? 'destructive' : 'outline'
+                          bookingRoom.booking.status === 'PENDING' ? 'secondary' :
+                            bookingRoom.booking.status === 'CANCELLED' ? 'destructive' : 'outline'
                       }
                     >
                       {bookingRoom.booking.status}

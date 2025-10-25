@@ -1,8 +1,7 @@
-
 import { createRoom, getHotels } from "./createRoom";
 import { amenitiesList } from "@/data/aminities";
 import Form from "next/form";
-
+import ImageUploadClient from "./ImageUploadClient";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +10,7 @@ export default async function CreateRoomPage() {
 
     return (
         <div className="bg-background text-foreground p-6 rounded-md shadow">
-            <div className="max-w-3xl mx-auto ">
+            <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl font-semibold mb-6">Create Room</h1>
 
                 <Form action={createRoom} className="space-y-6">
@@ -94,15 +93,8 @@ export default async function CreateRoomPage() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Room Image URL</label>
-                        <input
-                            type="url"
-                            name="roomImage"
-                            className="w-full bg-background border border-border rounded-md p-3"
-                            required
-                        />
-                    </div>
+                    {/* Image Upload Component */}
+                    <ImageUploadClient />
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Amenities</label>
@@ -135,7 +127,5 @@ export default async function CreateRoomPage() {
                 </Form>
             </div>
         </div>
-
-
     );
 }

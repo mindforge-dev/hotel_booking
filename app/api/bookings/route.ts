@@ -1,4 +1,4 @@
-import { NextResponse ,NextRequest} from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authGuard } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (!session?.user?.id || session?.user?.role !== "USER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
- 
+
 
     // 2. Parse and validate request body
     const body = await request.json();
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // 6. Return success response
+
     return NextResponse.json(
       {
         success: true,
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Booking creation error:", error);
 
-    // Handle Prisma errors
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         return NextResponse.json(
@@ -97,7 +97,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback error response
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -145,11 +144,11 @@ export const DELETE = async (request: Request) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Debug logging
+
     console.log("Session user:", session.user);
     console.log("User role:", session.user?.role);
 
- 
+
 
     const body = await request.json();
     const { ids } = body;
@@ -161,9 +160,9 @@ export const DELETE = async (request: Request) => {
       );
     }
 
-    // Delete booking rooms and their associated bookings in a transaction
+
     const result = await prisma.$transaction(async (tx) => {
-      // First, get the booking IDs associated with these booking rooms
+
       const bookingRooms = await tx.bookingRoom.findMany({
         where: {
           id: {

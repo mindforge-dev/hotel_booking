@@ -16,24 +16,34 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setLoading(true)
-
     const formData = new FormData(e.currentTarget)
-    
-    try {
-      const res = await signIn("credentials", {
-        email: formData.get("email"),
-        password: formData.get("password"),
-        redirect: false,
-      })
 
+    try {
+      const email = String(formData.get("email") || "")
+      const password = String(formData.get("password") || "")
+
+      const res = (await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })) as any
+
+      // next-auth may return an object with an `error` string or ok flag
       if (res?.error) {
+        // show provider error when available, otherwise fallback
+        setError(res.error === "CredentialsSignin" ? "Invalid credentials" : String(res.error))
+        return
+      }
+
+      if (!res || res?.ok === false) {
         setError("Invalid credentials")
         return
       }
 
       router.push("/")
       router.refresh()
-    } catch (error) {
+    } catch (err) {
+      console.error("Login error:", err)
       setError("Something went wrong")
     } finally {
       setLoading(false)
@@ -43,7 +53,7 @@ export default function LoginPage() {
   return (
     <div className="container mx-auto max-w-md py-20">
       <h1 className="text-3xl font-bold mb-6">Login</h1>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Input
@@ -61,7 +71,7 @@ export default function LoginPage() {
             required
           />
         </div>
-        
+
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
         )}

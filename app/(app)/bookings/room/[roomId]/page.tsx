@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, Bed, Wifi, Car, Coffee, Tv, Bath } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import LightboxGallery from "@/components/LightboxGallery";
 
 interface RoomDetailsPageProps {
     params: {
@@ -42,7 +42,7 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
     const { roomId } = await params;
 
     // Fetch room details with hotel information
-    const room = await prisma.room.findUnique({
+    const room: any = await prisma.room.findUnique({
         where: { id: roomId },
         include: {
             hotel: {
@@ -71,7 +71,7 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
             }
         }
     });
-
+    console.log(room)
     if (!room) {
         notFound();
     }
@@ -97,12 +97,9 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
                 <div className="space-y-4">
                     <Card>
                         <CardContent className="p-0">
-                            <div className="relative h-64 md:h-80">
-                                <Image
-                                    src={room.image || "/placeholder-room.jpg"}
-                                    alt={room.name}
-                                    fill
-                                    className="object-cover rounded-lg"
+                            <div className="px-4 py-4">
+                                <LightboxGallery
+                                    images={[room.image || "/placeholder-room.jpg", ...(room.subImage || [])]}
                                 />
                             </div>
                         </CardContent>
@@ -163,7 +160,7 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {room.amenities.map((amenity, index) => {
+                                    {room.amenities.map((amenity: any, index: number) => {
                                         const IconComponent = amenityIcons[amenity.toLowerCase()] || Bed;
                                         return (
                                             <div key={index} className="flex items-center space-x-2">
@@ -207,7 +204,7 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
                                 <div>
                                     <span className="font-medium">Hotel Amenities:</span>
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                        {room.hotel.amenities.slice(0, 5).map((amenity, index) => (
+                                        {room.hotel.amenities.slice(0, 5).map((amenity: any, index: number) => (
                                             <Badge key={index} variant="outline" className="text-xs">
                                                 {amenity}
                                             </Badge>
@@ -233,7 +230,7 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {room.bookings.map((bookingRoom) => (
+                            {room.bookings.map((bookingRoom: any) => (
                                 <div key={bookingRoom.id} className="border rounded-lg p-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="font-medium">Booking #{bookingRoom.booking.id.slice(-8)}</span>

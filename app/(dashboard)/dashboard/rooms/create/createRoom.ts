@@ -1,23 +1,16 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
 import { redirect } from "next/navigation";
-const RoomSchema = z.object({
-    hotelId: z.string().min(1),
-    name: z.string(),
-    roomType: z.enum(["SINGLE", "DOUBLE", "TWIN", "SUITE", "FAMILY"]),
-    price: z.string().refine((val) => !isNaN(Number(val)), {
-        message: "Price must be a number",
-    }),
-    totalRooms: z.string().refine((val) => !isNaN(Number(val))),
-    availableRooms: z.string().refine((val) => !isNaN(Number(val))),
-    roomImage: z.string().url("Must be a valid URL"),
-    amenities: z.array(z.string()).optional(),
-});
+import { RoomSchema } from "@/schemas/room.schema";
+import { uploadToCloudinary } from "@/lib/imageUpload/cloudinaryImageUpload";
 
 export async function createRoom(formData: FormData) {
     const amenities = formData.getAll("amenities") as string[];
+
+    const mainImageFile = formData.get("mainImage") as File;
+
+    const subImageFiles = formData.getAll("subImages") as File[];
 
     const parsed = RoomSchema.safeParse({
         name: formData.get("name"),
@@ -26,7 +19,6 @@ export async function createRoom(formData: FormData) {
         price: formData.get("price"),
         totalRooms: formData.get("totalRooms"),
         availableRooms: formData.get("availableRooms"),
-        roomImage: formData.get("roomImage"),
         amenities,
     });
 
@@ -35,16 +27,42 @@ export async function createRoom(formData: FormData) {
     }
 
     const data = parsed.data;
+    let mainImageUrl = '';
+    if (mainImageFile && mainImageFile.size > 0) {
+        try {
+            mainImageUrl = await uploadToCloudinary(mainImageFile);
+        } catch (error) {
+            return { error: { mainImage: ['Failed to upload main image'] } };
+        }
+    } else {
+        return { error: { mainImage: ['Main image is required'] } };
+    }
+
+
+    const subImageUrls: string[] = [];
+    for (const file of subImageFiles) {
+        if (file && file.size > 0) {
+            try {
+                const url = await uploadToCloudinary(file);
+                subImageUrls.push(url);
+            } catch (error) {
+                console.error('Failed to upload sub image:', error);
+                // Continue with other images even if one fails
+            }
+        }
+    }
+
 
     await prisma.room.create({
         data: {
-            name: formData.get("name"),
+            name: data.name,
             hotelId: data.hotelId,
             roomType: data.roomType,
             price: parseFloat(data.price),
             total: parseInt(data.totalRooms),
             available: parseInt(data.availableRooms),
-            image: data.roomImage,
+            image: mainImageUrl,
+            subImage: subImageUrls, // Add this field to your Prisma schema
             amenities: data.amenities || [],
         },
     });

@@ -13,20 +13,20 @@ export default function DashboardLayout({
 
   return (
     <div>
-     
+
       <DashboardNavbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
       <div className="pt-16 h-screen relative overflow-hidden md:flex">
 
         {/* Sidebar for desktop (always visible) */}
-        <div className="hidden md:block w-72 fixed inset-y-0 bg-background border-r pt-16 z-40">
+        <div className="hidden md:block w-72 fixed inset-y-0  border-r pt-16 z-40">
           <Sidebar />
         </div>
 
         {/* Sidebar drawer for mobile */}
         <div
           className={`
-            fixed z-50 inset-y-0 left-0 w-72 bg-background border-r pt-16
+            fixed z-50 inset-y-0 left-0 w-72  border-r pt-16
             transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
             transition-transform duration-300 ease-in-out
             md:hidden

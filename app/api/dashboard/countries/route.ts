@@ -7,7 +7,8 @@ export async function GET() {
     const countries = await prisma.country.findMany({
       include: {
         cities: true
-      }
+      },
+
     })
     return NextResponse.json(countries)
   } catch (error) {
@@ -16,45 +17,3 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const { name, code } = body as CreateCountryDto
-
-    if (!name || !code) {
-      return new NextResponse("Name and code are required", { status: 400 })
-    }
-
-    // Check if country with same name or code already exists
-    const existingCountry = await prisma.country.findFirst({
-      where: {
-        OR: [
-          { name },
-          { code }
-        ]
-      }
-    })
-
-    if (existingCountry) {
-      return new NextResponse(
-        "Country with this name or code already exists",
-        { status: 409 }
-      )
-    }
-
-    const country = await prisma.country.create({
-      data: {
-        name,
-        code
-      }
-    })
-
-    return NextResponse.json(country)
-  } catch (error) {
-    console.error("Error creating country:", error)
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 400 })
-    }
-    return new NextResponse("Internal Server Error", { status: 500 })
-  }
-}
