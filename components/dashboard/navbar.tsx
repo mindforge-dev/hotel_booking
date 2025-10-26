@@ -1,12 +1,12 @@
 "use client"
 
-import { 
-  Menu, 
-  Bell, 
-  Search, 
-  Settings, 
-  User, 
-  LogOut, 
+import {
+  Menu,
+  Bell,
+  Search,
+  Settings,
+  User,
+  LogOut,
   ChevronDown,
   Hotel,
   BarChart3,
@@ -18,10 +18,10 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { Badge } from "@/components/ui/badge"
 import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from "../ui/popover"
 import {
   DropdownMenu,
@@ -40,7 +40,7 @@ import { NavbarProps } from "@/types/ui"
 export function DashboardNavbar({ onMenuClick }: NavbarProps) {
   const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
-  
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -88,7 +88,7 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
           <Button variant="ghost" size="icon" onClick={onMenuClick} className="md:hidden">
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="flex items-center gap-3">
             <Hotel className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
@@ -158,7 +158,7 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="max-h-80 overflow-y-auto">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-8">
@@ -172,11 +172,10 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
                   ) : (
                     <div className="divide-y">
                       {notifications?.slice(0, 5).map((notification, index) => (
-                        <div 
-                          key={notification.id || `notification-${index}`} 
-                          className={`p-4 hover:bg-muted/50 transition-colors ${
-                            !notification.isRead ? 'bg-primary/5 border-l-2 border-l-primary' : ''
-                          }`}
+                        <div
+                          key={notification.id || `notification-${index}`}
+                          className={`p-4 hover:bg-muted/50 transition-colors ${!notification.isRead ? 'bg-primary/5 border-l-2 border-l-primary' : ''
+                            }`}
                         >
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 mt-1">
@@ -199,7 +198,7 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="p-4 border-t">
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/dashboard/notifications">
@@ -264,10 +263,10 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/auth/signin">Sign In</Link>
+                <Link href="/auth/login">Sign In</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/auth/signup">Sign Up</Link>
+                <Link href="/auth/register">Sign Up</Link>
               </Button>
             </div>
           )}

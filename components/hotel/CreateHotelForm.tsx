@@ -58,8 +58,13 @@ export default function CreateHotelForm() {
   });
 
   const [selectedCountryId, setSelectedCountryId] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const { data: locations, isLoading } = useQuery({
+
+  type City = { id: string; name: string };
+  type Country = { id: string; name: string; cities: City[] };
+
+  const { data: locations, isLoading } = useQuery<Country[]>({
     queryKey: ["locations"],
     queryFn: async () => {
       const response = await axios.get("/api/locations");
@@ -72,19 +77,50 @@ export default function CreateHotelForm() {
 
   const createHotel = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      const { data } = await axios.post<CreateHotelResponse>(
-        "/api/hotels",
-        values,
-        {
-          headers: {
-            "Content-Type": "application/json",
+      try {
+        const formData = new FormData();
+
+        // Handle image - first upload it if it's a File
+        let imageUrl = values.image;
+        if (values.image instanceof File) {
+          const imageFormData = new FormData();
+          imageFormData.append('file', values.image);
+
+          const uploadResponse = await axios.post('/api/upload', imageFormData);
+          if (!uploadResponse.data?.url) {
+            throw new Error('Failed to upload image');
+          }
+          imageUrl = uploadResponse.data.url;
+        }
+
+        // Append all form fields
+        formData.append('image', imageUrl);
+        formData.append('name', values.name);
+        formData.append('description', values.description);
+        formData.append('country', values.country);
+        formData.append('cityId', values.cityId);
+        formData.append('rating', values.rating.toString());
+        formData.append('featured', values.featured.toString());
+        formData.append('amenities', JSON.stringify(values.amenities));
+
+        const { data } = await axios.post<CreateHotelResponse>(
+          "/api/hotels",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
           },
-        },
-      );
-      return data;
+        );
+        return data;
+      } catch (error) {
+        console.error('Error in createHotel:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       form.reset();
+      setImagePreview(null);
     },
     onError: (error) => {
       if (axios.isAxiosError(error)) {
@@ -100,20 +136,45 @@ export default function CreateHotelForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Hotel Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter hotel name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hotel Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter hotel name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="rating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rating</FormLabel>
+
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    step={0.1}
+                    placeholder="Enter rating"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
@@ -133,9 +194,11 @@ export default function CreateHotelForm() {
           )}
         />
         {isLoading ? (
-          <h3>Loading ....</h3>
+          <div className="flex items-center justify-center py-6">
+            <div className="text-sm text-muted-foreground">Loading locations...</div>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="country"
@@ -203,38 +266,57 @@ export default function CreateHotelForm() {
           name="image"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Image URL</FormLabel>
+              <FormLabel>Hotel Image</FormLabel>
+              <FormDescription>Upload a high-quality image to showcase your hotel</FormDescription>
               <FormControl>
-                <Input placeholder="Enter image URL" {...field} />
+                <div className="mt-2 space-y-4">
+                  <label className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center text-center transition-colors duration-200 ${imagePreview ? 'border-muted' : 'border-primary/20 hover:border-primary/50'}`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        // Create local preview
+                        const local = URL.createObjectURL(file);
+                        setImagePreview(local);
+
+                        // Store the actual file object in the form
+                        field.onChange(file);
+                      }}
+                    />
+                    <div className="flex flex-col items-center gap-1">
+                      <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                      <span className="text-sm font-medium">Click to upload</span>
+                      <span className="text-xs text-muted-foreground">PNG, JPG, WEBP (max 5MB)</span>
+                    </div>
+                  </label>
+
+                  {imagePreview && (
+                    <div className="relative rounded-lg overflow-hidden border aspect-video">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview(null);
+                          field.onChange('');
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="rating"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rating</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    placeholder="Enter rating"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <FormField
           control={form.control}
@@ -268,7 +350,7 @@ export default function CreateHotelForm() {
                   Select the amenities available at this hotel
                 </FormDescription>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-background/50 p-4 rounded-lg border">
                 {amenitiesOptions.map((amenity) => (
                   <FormField
                     key={amenity}
@@ -305,9 +387,11 @@ export default function CreateHotelForm() {
           )}
         />
 
-        <Button type="submit" disabled={createHotel.isPending}>
-          {createHotel.isPending ? "Creating..." : "Create Hotel"}
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit" size="lg" disabled={createHotel.isPending}>
+            {createHotel.isPending ? "Creating..." : "Create Hotel"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
