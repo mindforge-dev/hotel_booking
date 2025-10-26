@@ -9,9 +9,9 @@ import { ArrowLeft, Users, Bed, Wifi, Car, Coffee, Tv, Bath } from "lucide-react
 import Link from "next/link";
 import LightboxGallery from "@/components/LightboxGallery";
 
-interface RoomDetailsPageProps {
+interface BookingDetailsPageProps {
     params: {
-        roomId: string;
+        bookingId: string;
     };
 }
 
@@ -24,7 +24,7 @@ const amenityIcons: Record<string, any> = {
     bed: Bed,
 };
 
-export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) {
+export default async function BookingDetailsPage({ params }: BookingDetailsPageProps) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -39,42 +39,50 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
         );
     }
 
-    const { roomId } = await params;
+    const bookingId = (params as any).bookingId ?? (params as any).roomId;
+    if (!bookingId) return notFound();
 
-    // Fetch room details with hotel information
-    const room: any = await prisma.room.findUnique({
-        where: { id: roomId },
+
+    const booking: any = await prisma.booking.findUnique({
+        where: { id: bookingId },
         include: {
             hotel: {
                 include: {
-                    city: {
-                        include: {
-                            country: true
-                        }
-                    }
+                    city: { include: { country: true } }
                 }
             },
-            bookings: {
-                where: {
-                    booking: {
-                        userId: session.user.id
-                    }
-                },
-                include: {
-                    booking: true
-                },
-                orderBy: {
-                    booking: {
-                        createdAt: 'desc'
-                    }
-                }
-            }
+            rooms: { include: { room: true } },
+            user: true,
         }
     });
-    console.log(room)
-    if (!room) {
-        notFound();
-    }
+
+    if (!booking) return notFound();
+
+    const isOwner = booking.userId === session.user.id;
+    const isAdmin = session.user.role === 'ADMIN';
+    if (!isOwner && !isAdmin) return notFound();
+
+    const firstRoom = booking.rooms?.[0]?.room;
+    const images: string[] = (booking.rooms || []).flatMap((br: any) => [br.room?.image || "/placeholder-room.jpg", ...(br.room?.subImage || [])]);
+
+    const checkIn = new Date(booking.checkIn);
+    const checkOut = new Date(booking.checkOut);
+    const nights = Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+
+    const roomLines = (booking.rooms || []).map((br: any) => {
+        const r = br.room;
+        const price = r?.price || 0;
+        const subtotal = price * nights;
+        return {
+            id: br.id,
+            name: r?.name || 'Room',
+            price,
+            subtotal,
+            image: r?.image,
+        };
+    });
+
+    const total = roomLines.reduce((sum: number, l: any) => sum + l.subtotal, 0);
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -86,181 +94,88 @@ export default async function RoomDetailsPage({ params }: RoomDetailsPageProps) 
                     </Button>
                 </Link>
 
-                <h1 className="text-3xl font-bold mb-2">{room.name}</h1>
+                <h1 className="text-3xl font-bold mb-2">Booking #{booking.id.slice(-8)} — {firstRoom?.name || booking.hotel.name}</h1>
                 <p className="text-muted-foreground">
-                    {room.hotel.name} • {room.hotel.city.name}, {room.hotel.city.country.name}
+                    {booking.hotel.name} • {booking.hotel.city?.name}, {booking.hotel.city?.country?.name}
                 </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Room Image */}
                 <div className="space-y-4">
                     <Card>
                         <CardContent className="p-0">
                             <div className="px-4 py-4">
-                                <LightboxGallery
-                                    images={[room.image || "/placeholder-room.jpg", ...(room.subImage || [])]}
-                                />
+                                <LightboxGallery images={images.length ? images : ["/placeholder-room.jpg"]} />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Room Details */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Room Information</CardTitle>
+                            <CardTitle>Booking Information</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className="font-medium">Room Type:</span>
-                                <Badge variant="secondary">{room.roomType}</Badge>
+                                <span className="font-medium">Status</span>
+                                <Badge variant={booking.status === 'CONFIRMED' ? 'default' : booking.status === 'PENDING' ? 'secondary' : 'destructive'}>{booking.status}</Badge>
                             </div>
 
                             <div className="flex items-center justify-between">
-                                <span className="font-medium">Price per night:</span>
-                                <span className="text-2xl font-bold text-primary">${room.price}</span>
+                                <span className="font-medium">Check-in</span>
+                                <span>{checkIn.toLocaleDateString()}</span>
                             </div>
 
                             <div className="flex items-center justify-between">
-                                <span className="font-medium">Max Occupancy:</span>
-                                <div className="flex items-center">
-                                    <Users className="mr-1 h-4 w-4" />
-                                    <span>{room.maxOccupancy || 2} guests</span>
-                                </div>
+                                <span className="font-medium">Check-out</span>
+                                <span>{checkOut.toLocaleDateString()}</span>
                             </div>
 
                             <div className="flex items-center justify-between">
-                                <span className="font-medium">Availability:</span>
-                                <span className={`font-medium ${room.available > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {room.available} / {room.total} available
-                                </span>
+                                <span className="font-medium">Nights</span>
+                                <span>{nights}</span>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Room Description */}
-                    {room.description && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Description</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground">{room.description}</p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Amenities */}
-                    {room.amenities && room.amenities.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Amenities</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {room.amenities.map((amenity: any, index: number) => {
-                                        const IconComponent = amenityIcons[amenity.toLowerCase()] || Bed;
-                                        return (
-                                            <div key={index} className="flex items-center space-x-2">
-                                                <IconComponent className="h-4 w-4 text-primary" />
-                                                <span className="capitalize">{amenity}</span>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Purchase / Payment</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2 text-sm">
+                                {roomLines.map((line: any) => (
+                                    <div key={line.id} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <img src={line.image || '/placeholder-room.jpg'} alt={line.name} className="w-16 h-12 object-cover rounded-md" />
+                                            <div>
+                                                <div>{line.name}</div>
+                                                <div className="text-muted-foreground">${line.price.toFixed(2)} / night</div>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                        <div className="font-medium">${line.subtotal.toFixed(2)}</div>
+                                    </div>
+                                ))}
+
+                                <div className="flex items-center justify-between border-t pt-2 font-semibold">
+                                    <div>Total</div>
+                                    <div>${total.toFixed(2)}</div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    )}
 
-
-                </div>
-            </div>
-
-            {/* Hotel Information */}
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Hotel Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <h3 className="font-semibold mb-2">{room.hotel.name}</h3>
-                            <p className="text-muted-foreground mb-2">{room.hotel.description}</p>
-                            <p className="text-sm text-muted-foreground">
-                                📍 {room.hotel.location}
-                            </p>
-                        </div>
-                        <div>
-                            <div className="flex items-center mb-2">
-                                <span className="font-medium mr-2">Rating:</span>
-                                <div className="flex items-center">
-                                    <span className="text-yellow-500">★</span>
-                                    <span className="ml-1">{room.hotel.rating}/5</span>
+                                <div className="mt-3 flex gap-2">
+                                    {booking.status === 'PENDING' && (
+                                        <Button>Proceed to Payment</Button>
+                                    )}
+                                    <Link href={`/bookings/${booking.id}`} className="ml-auto">
+                                        <Button variant="ghost">View Booking Details</Button>
+                                    </Link>
                                 </div>
                             </div>
-                            {room.hotel.amenities && room.hotel.amenities.length > 0 && (
-                                <div>
-                                    <span className="font-medium">Hotel Amenities:</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {room.hotel.amenities.slice(0, 5).map((amenity: any, index: number) => (
-                                            <Badge key={index} variant="outline" className="text-xs">
-                                                {amenity}
-                                            </Badge>
-                                        ))}
-                                        {room.hotel.amenities.length > 5 && (
-                                            <Badge variant="outline" className="text-xs">
-                                                +{room.hotel.amenities.length - 5} more
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* User's Bookings for this Room */}
-            {room.bookings && room.bookings.length > 0 && (
-                <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle>Your Bookings for this Room</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {room.bookings.map((bookingRoom: any) => (
-                                <div key={bookingRoom.id} className="border rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="font-medium">Booking #{bookingRoom.booking.id.slice(-8)}</span>
-                                        <Badge
-                                            variant={
-                                                bookingRoom.booking.status === 'CONFIRMED' ? 'default' :
-                                                    bookingRoom.booking.status === 'PENDING' ? 'secondary' :
-                                                        bookingRoom.booking.status === 'CANCELLED' ? 'destructive' : 'outline'
-                                            }
-                                        >
-                                            {bookingRoom.booking.status}
-                                        </Badge>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                        <div>
-                                            <span className="font-medium">Check-in:</span> {new Date(bookingRoom.booking.checkIn).toLocaleDateString()}
-                                        </div>
-                                        <div>
-                                            <span className="font-medium">Check-out:</span> {new Date(bookingRoom.booking.checkOut).toLocaleDateString()}
-                                        </div>
-                                        <div>
-                                            <span className="font-medium">Booked:</span> {new Date(bookingRoom.booking.createdAt).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

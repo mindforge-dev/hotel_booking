@@ -83,7 +83,7 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
       </div>
     ),
   },
-  
+
   {
     accessorKey: "checkIn",
     header: "Check-in",
@@ -124,15 +124,15 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
       );
     },
   },
- 
+
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ getValue }) => {
       const status = getValue() as string;
       return (
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={`${getStatusColor(status)} font-medium`}
         >
           {status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || 'Unknown'}
@@ -163,12 +163,12 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
     cell: ({ row }) => {
       const rooms = row.original.rooms || [];
       if (rooms.length === 0) return <span className="text-gray-500">No rooms</span>;
-      
+
       return (
         <div className="space-y-1">
           {rooms.slice(0, 2).map((bookingRoom) => (
             <div key={bookingRoom.id} className="text-sm">
-              <Link 
+              <Link
                 href={`/bookings/room/${bookingRoom.room.id}`}
                 className="text-primary hover:underline font-medium"
               >
@@ -192,13 +192,14 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      console.log(row.original)
+      console.log(row)
       return (
         <div className="flex items-center gap-2">
           <Link href={`/bookings/room/${row.original.id}`}>
             <Button variant="ghost" size="sm" className="h-8">
               <Eye className="h-4 w-4 mr-1" />
               View Details
+
             </Button>
           </Link>
         </div>
