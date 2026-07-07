@@ -9,6 +9,8 @@ import { Room, RoomResponse } from "@/types/rooms"
 import { DataTable } from '@/components/dataTable/data-table'
 import { columns } from './columns'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 export default function Page() {
     const { hotelId } = useParams<{ hotelId: string }>()
 
@@ -39,8 +41,11 @@ export default function Page() {
                     </h1>
                     <p className="text-muted-foreground">Manage your Room listings</p>
                 </div>
-                <Button>
-                    <a href={`/dashboard/rooms/create`}>Add Room</a>
+                <Button asChild>
+                    <Link href={`/dashboard/hotels/${hotelId}/rooms/new`} className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Room
+                    </Link>
                 </Button>
             </div>
             <DataTable columns={columns} data={data || []} />

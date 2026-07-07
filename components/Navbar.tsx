@@ -21,19 +21,19 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const { data: session } = useSession()
-  const { data: notifications = [], isLoading } = useNotifications(false) ?? [];
+  const { data: notifications = [], isLoading } = useNotifications(false) ?? {};
 
 
   return (
-    <nav className="fixed w-full top-0 z-50 bg-white text-black  dark:text-white dark:bg-black shadow-md">
+    <nav className="fixed w-full top-0 z-50 bg-background text-foreground shadow-md border-b">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-xl dar:text font-bold">
+        <Link href="/" className="text-xl font-bold">
           IDKHOTEL
         </Link>
 
         <div className="hidden md:flex items-center space-x-6">
           {navLinks.map((link) => (
-            <Link key={link.name} href={link.href} className="text-gray-700 hover:text-black">
+            <Link key={link.name} href={link.href} className="text-foreground/70 hover:text-foreground transition-colors">
               {link.name}
             </Link>
           ))}
@@ -67,27 +67,27 @@ export default function Navbar() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto"
+                    className="absolute right-0 mt-2 w-80 bg-popover text-popover-foreground border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto"
                   >
-                    <div className="p-4 border-b">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                    <div className="p-4 border-b border-border">
+                      <h3 className="font-semibold">Notifications</h3>
                     </div>
                     <div className="p-2">
                       {isLoading ? (
-                        <p className="text-center py-4 text-gray-500">Loading notifications...</p>
+                        <p className="text-center py-4 text-muted-foreground">Loading notifications...</p>
                       ) : notifications.length === 0 ? (
-                        <p className="text-center py-4 text-gray-500">No notifications</p>
+                        <p className="text-center py-4 text-muted-foreground">No notifications</p>
                       ) : (
                         notifications.slice(0, 5).map(notification => (
                           <div
                             key={notification.id}
                             className={`p-3 rounded-md mb-2 ${!notification.isRead
-                              ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500'
-                              : 'bg-gray-50 dark:bg-gray-700/50'
+                              ? 'bg-blue-500/10 border-l-4 border-blue-500'
+                              : 'bg-muted/50'
                               }`}
                           >
-                            <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-sm">{notification.message}</p>
+                            <span className="text-xs text-muted-foreground">
                               {new Date(notification.createdAt).toLocaleString()}
                             </span>
                           </div>
@@ -96,7 +96,7 @@ export default function Navbar() {
                       {notifications.length > 5 && (
                         <Link
                           href="/dashboard/notifications"
-                          className="block text-center py-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          className="block text-center py-2 text-primary hover:text-primary/80 text-sm font-medium"
                           onClick={() => setNotificationOpen(false)}
                         >
                           View all notifications
@@ -126,18 +126,18 @@ export default function Navbar() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-md z-50"
+                    className="absolute right-0 mt-2 w-48 bg-popover text-popover-foreground border rounded-md shadow-md z-50"
                   >
                     <Link
                       href="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={() => setProfileOpen(false)}
                     >
                       Dashboard
                     </Link>
                     <Link
                       href="/settings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={() => setProfileOpen(false)}
                     >
                       Settings
@@ -147,7 +147,7 @@ export default function Navbar() {
                         signOut()
                         setProfileOpen(false)
                       }}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
                     >
                       Sign out
                     </button>
@@ -172,7 +172,7 @@ export default function Navbar() {
         {isOpen && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black bg-opacity-40 z-40"
+              className="fixed inset-0 bg-black/40 z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -180,7 +180,7 @@ export default function Navbar() {
             />
 
             <motion.div
-              className="fixed top-0 left-0 w-64 h-full bg-white z-50 shadow-md px-6 py-4"
+              className="fixed top-0 left-0 w-64 h-full bg-background z-50 shadow-md px-6 py-4 border-r"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -199,7 +199,7 @@ export default function Navbar() {
                     key={link.name}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
-                    className="text-gray-700 hover:text-black"
+                    className="text-foreground/70 hover:text-foreground transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -211,14 +211,14 @@ export default function Navbar() {
                       key="dashboard-link"
                       href="/dashboard"
                       onClick={() => setIsOpen(false)}
-                      className="text-gray-700 hover:text-black"
+                      className="text-foreground/70 hover:text-foreground transition-colors"
                     >
                       Dashboard
                     </Link>
                     <Button
                       key="sign-out-button"
                       variant="ghost"
-                      className="text-left px-0 text-red-600"
+                      className="text-left px-0 text-destructive"
                       onClick={() => {
                         signOut()
                         setIsOpen(false)

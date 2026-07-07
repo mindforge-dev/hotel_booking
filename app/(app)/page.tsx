@@ -73,12 +73,12 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, index) => (
               <Card key={index}>
-                <div className="relative h-48 bg-gray-200 animate-pulse rounded-t-lg" />
+                <div className="relative h-48 bg-muted animate-pulse rounded-t-lg" />
                 <CardContent className="p-4">
-                  <div className="h-6 w-3/4 bg-gray-200 animate-pulse rounded mb-2" />
+                  <div className="h-6 w-3/4 bg-muted animate-pulse rounded mb-2" />
                   <div className="flex items-center gap-1 mt-1">
-                    <div className="h-4 w-4 bg-gray-200 animate-pulse rounded-full" />
-                    <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded" />
+                    <div className="h-4 w-4 bg-muted animate-pulse rounded-full" />
+                    <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
                   </div>
                 </CardContent>
               </Card>
@@ -122,11 +122,11 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {[...Array(4)].map((_, index) => (
               <Card key={index} className="overflow-hidden">
-                <div className="relative h-48 bg-gray-200 animate-pulse" />
+                <div className="relative h-48 bg-muted animate-pulse" />
                 <div className="absolute inset-0 flex items-end p-4">
                   <div className="w-full">
-                    <div className="h-6 w-3/4 bg-gray-300 animate-pulse rounded mb-2" />
-                    <div className="h-4 w-1/2 bg-gray-300 animate-pulse rounded" />
+                    <div className="h-6 w-3/4 bg-muted animate-pulse rounded mb-2" />
+                    <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
                   </div>
                 </div>
               </Card>

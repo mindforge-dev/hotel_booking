@@ -56,7 +56,7 @@ const getStatusColor = (status: string) => {
     case 'completed':
       return 'bg-blue-100 text-blue-800 border-blue-200';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-secondary text-secondary-foreground border-border';
   }
 };
 
@@ -75,7 +75,7 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
           <h3 className="font-semibold text-sm">
             {row.original.hotel?.name || 'N/A'}
           </h3>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin className="h-3 w-3" />
             <span>Rating: {row.original.hotel?.rating || 'N/A'}/5</span>
           </div>
@@ -91,12 +91,12 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
       const date = new Date(getValue() as string);
       return (
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-400" />
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           <div>
             <div className="font-medium text-sm">
               {!isNaN(date.getTime()) ? format(date, "MMM dd, yyyy") : "Invalid date"}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted-foreground">
               {!isNaN(date.getTime()) ? format(date, "EEEE") : ""}
             </div>
           </div>
@@ -111,12 +111,12 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
       const date = new Date(getValue() as string);
       return (
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-400" />
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           <div>
             <div className="font-medium text-sm">
               {!isNaN(date.getTime()) ? format(date, "MMM dd, yyyy") : "Invalid date"}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted-foreground">
               {!isNaN(date.getTime()) ? format(date, "EEEE") : ""}
             </div>
           </div>
@@ -162,7 +162,7 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
     header: "Room(s)",
     cell: ({ row }) => {
       const rooms = row.original.rooms || [];
-      if (rooms.length === 0) return <span className="text-gray-500">No rooms</span>;
+      if (rooms.length === 0) return <span className="text-muted-foreground">No rooms</span>;
 
       return (
         <div className="space-y-1">
@@ -174,13 +174,13 @@ export const customerBookingColumns: ColumnDef<CustomerBooking, unknown>[] = [
               >
                 {bookingRoom.room.name}
               </Link>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 {bookingRoom.room.roomType} • ${bookingRoom.room.price}/night
               </div>
             </div>
           ))}
           {rooms.length > 2 && (
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted-foreground">
               +{rooms.length - 2} more room(s)
             </div>
           )}

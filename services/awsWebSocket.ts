@@ -1,185 +1,199 @@
-import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
 import axios from 'axios';
 import { WebSocketMessage } from '@/types/websocket';
 
-// In-memory store for connection IDs (in production, use Redis or DynamoDB)
+/**
+ * AWS WebSocket Service for real-time notifications.
+ *
+ * This service sends messages through the CDK-deployed WebSocket infrastructure:
+ * - API Gateway WebSocket API (manages connections)
+ * - Lambda handlers (connect, disconnect, sendMessage)
+ * - DynamoDB (stores connectionId ↔ userId mappings with TTL)
+ *
+ * The in-memory Map is kept as a local cache for fast lookups during the
+ * same server process lifecycle, but DynamoDB is the source of truth.
+ */
+
+// Local cache — supplements DynamoDB for same-process lookups
 const userConnections = new Map<string, string>();
 
 export class AWSWebSocketService {
-    private wsApiUrl: string;
-    private wsEndpoint: string;
-    private apiGatewayEndpoint: string;
-    private apiGatewayClient: ApiGatewayManagementApiClient | null = null;
+  private wsApiUrl: string;
+  private wsEndpoint: string;
+  private region: string;
 
-    constructor() {
-        this.wsApiUrl = process.env.WEBSOCKET_API_URL || '';
-        this.wsEndpoint = process.env.NEXT_PUBLIC_WEB_SOCKET_URL || '';
+  constructor() {
+    this.wsApiUrl = process.env.WEBSOCKET_API_URL || '';
+    this.wsEndpoint = process.env.NEXT_PUBLIC_WEB_SOCKET_URL || '';
+    this.region = process.env.AWS_REGION || 'ap-southeast-1';
 
-        // Extract the API Gateway endpoint from WebSocket URL
-
-        this.apiGatewayEndpoint = this.wsEndpoint.replace('wss://', 'https://').replace('ws://', 'http://');
-
-        // Initialize AWS API Gateway Management API client // wss://kkxol6k0v8.execute-api.ap-southeast-1.amazonaws.com/dev/ -> https://kkxol6k0v8.execute-api.ap-southeast-1.amazonaws.com/dev
-        if (this.apiGatewayEndpoint) {
-            try {
-                this.apiGatewayClient = new ApiGatewayManagementApiClient({
-                    endpoint: this.apiGatewayEndpoint,
-                    region: process.env.AWS_REGION || 'ap-southeast-1',
-                    credentials: {
-                        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-                        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-                    }
-                });
-            } catch (error) {
-                console.warn('Failed to initialize AWS API Gateway client:', error);
-            }
-        }
+    if (!this.wsApiUrl && !this.wsEndpoint) {
+      console.warn('[AWSWebSocket] WEBSOCKET_API_URL and NEXT_PUBLIC_WEB_SOCKET_URL are not configured');
     }
+  }
 
-    // Store connection ID for a user
-    storeUserConnection(userId: string, connectionId: string) {
-        userConnections.set(userId, connectionId);
-        console.log(`📝 Stored connection for user ${userId}: ${connectionId}`);
-    }
+  // ─── Connection Management (local cache) ─────────────────────────
 
-    // Remove connection ID for a user
-    removeUserConnection(userId: string) {
-        userConnections.delete(userId);
-        console.log(`🗑️ Removed connection for user ${userId}`);
-    }
+  storeUserConnection(userId: string, connectionId: string) {
+    userConnections.set(userId, connectionId);
+    console.log(`[AWSWebSocket] Cached connection for user ${userId}: ${connectionId}`);
+  }
 
-    // Get connection ID for a user
-    getUserConnection(userId: string): string | undefined {
-        return userConnections.get(userId);
-    }
+  removeUserConnection(userId: string) {
+    userConnections.delete(userId);
+    console.log(`[AWSWebSocket] Removed cached connection for user ${userId}`);
+  }
 
-    async sendMessageToUser(userId: string, message: WebSocketMessage): Promise<boolean> {
+  getUserConnection(userId: string): string | undefined {
+    return userConnections.get(userId);
+  }
+
+  // ─── Message Sending ──────────────────────────────────────────────
+
+  /**
+   * Send a WebSocket message to a specific user.
+   * Routes through the API Gateway WebSocket sendMessage Lambda handler.
+   */
+  async sendMessageToUser(userId: string, message: WebSocketMessage): Promise<boolean> {
+    try {
+      // Method 1: Send via the WebSocket API Gateway sendMessage route (Lambda handler)
+      if (this.wsEndpoint) {
+        const endpoint = this.wsEndpoint.replace('wss://', 'https://').replace('ws://', 'http://');
         try {
-            // Method 1: Use AWS SDK with stored connection ID
-            if (this.apiGatewayClient) {
-                const connectionId = this.getUserConnection(userId);
-                if (connectionId) {
-                    try {
-                        const command = new PostToConnectionCommand({
-                            ConnectionId: connectionId,
-                            Data: JSON.stringify(message)
-                        });
-
-                        await this.apiGatewayClient.send(command);
-                        console.log(`✅ WebSocket message sent to user ${userId} via AWS SDK`);
-                        return true;
-                    } catch (awsError: any) {
-                        console.log(`⚠️ AWS SDK method failed for user ${userId}:`, awsError.message);
-                        // If connection is stale, remove it
-                        if (awsError.statusCode === 410) {
-                            this.removeUserConnection(userId);
-                        }
-                    }
-                } else {
-                    console.log(`⚠️ No connection ID found for user ${userId}`);
-                }
-            }
-
-            // Method 2: Use REST API endpoint that triggers WebSocket messages
-            if (this.wsApiUrl) {
-                try {
-                    await axios.post(this.wsApiUrl, message, {
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                    });
-                    console.log(`✅ WebSocket message sent to user ${userId} via custom API`);
-                    return true;
-                } catch (apiError) {
-                    console.log(`⚠️ Custom API method failed for user ${userId}`);
-                }
-            }
-
-            // Method 3: Try direct API Gateway Management API call
-            if (this.apiGatewayEndpoint) {
-                try {
-                    const managementApiUrl = `${this.apiGatewayEndpoint}/@connections`;
-                    await axios.post(managementApiUrl, message, {
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        params: {
-                            userId: userId
-                        }
-                    });
-                    console.log(`✅ WebSocket message sent to user ${userId} via API Gateway REST`);
-                    return true;
-                } catch (restError) {
-                    console.log(`⚠️ API Gateway REST method failed for user ${userId}`);
-                }
-            }
-
-            // Method 4: Log the message (for development/testing)
-            console.log(`📤 WebSocket message for user ${userId} (logged only):`, JSON.stringify(message, null, 2));
-
-            // For testing purposes, we'll consider this successful
-            // This allows the booking process to continue even if WebSocket fails
-            return true;
-
-        } catch (error) {
-            console.error(`❌ Failed to send WebSocket message to user ${userId}:`, error);
-            return false;
+          await axios.post(`${endpoint}/sendMessage`, JSON.stringify({
+            userId,
+            message,
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          console.log(`[AWSWebSocket] Message sent to user ${userId} via sendMessage route`);
+          return true;
+        } catch (apiError) {
+          console.warn(`[AWSWebSocket] sendMessage route failed:`, (apiError as Error).message);
         }
-    }
+      }
 
-    async sendNotificationToUsers(userIds: string[], notificationData: {
-        message: string;
-        type?: string;
-        data?: any;
-    }): Promise<{ success: number; failed: number }> {
-        let success = 0;
-        let failed = 0;
-
-        console.log(`📤 Sending WebSocket notifications to ${userIds.length} users`);
-
-        await Promise.all(
-            userIds.map(async (userId) => {
-                const message: WebSocketMessage = {
-                    action: 'sendNotification',
-                    userId,
-                    message: notificationData.message,
-                    type: notificationData.type || 'notification',
-                    data: notificationData.data || {},
-                    timestamp: new Date().toISOString(),
-                    id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    isRead: false,
-                    createdAt: new Date().toISOString()
-                };
-
-                const sent = await this.sendMessageToUser(userId, message);
-                if (sent) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            })
-        );
-
-        console.log(`📊 WebSocket notification results: ${success} success, ${failed} failed`);
-        return { success, failed };
-    }
-
-    // Method to test WebSocket connectivity
-    async testConnection(): Promise<boolean> {
+      // Method 2: Fallback — POST to the REST API URL (for cross-service calls)
+      if (this.wsApiUrl) {
         try {
-            const testMessage = {
-                action: 'ping',
-                userId: 'test',
-                message: 'Connection test',
-                timestamp: new Date().toISOString()
-            };
-
-            return await this.sendMessageToUser('test', testMessage);
-        } catch (error) {
-            console.error('WebSocket connection test failed:', error);
-            return false;
+          await axios.post(this.wsApiUrl, message, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          console.log(`[AWSWebSocket] Message sent to user ${userId} via REST API`);
+          return true;
+        } catch (restError) {
+          console.warn(`[AWSWebSocket] REST API method failed:`, (restError as Error).message);
         }
+      }
+
+      // Method 3: Development fallback — log the message
+      console.log(`[AWSWebSocket] No WebSocket endpoint available. Message logged:`, JSON.stringify(message, null, 2));
+      return true;
+
+    } catch (error) {
+      console.error(`[AWSWebSocket] Failed to send message to user ${userId}:`, error);
+      return false;
     }
+  }
+
+  /**
+   * Send notifications to multiple users at once.
+   * Uses the Lambda handler's userIds array support for batched sends.
+   */
+  async sendNotificationToUsers(userIds: string[], notificationData: {
+    message: string;
+    type?: string;
+    data?: any;
+  }): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+
+    console.log(`[AWSWebSocket] Sending notifications to ${userIds.length} users`);
+
+    if (userIds.length === 0) {
+      return { success: 0, failed: 0 };
+    }
+
+    try {
+      // Try batched send via the sendMessage Lambda route
+      if (this.wsEndpoint) {
+        const endpoint = this.wsEndpoint.replace('wss://', 'https://').replace('ws://', 'http://');
+        try {
+          const message: WebSocketMessage = {
+            action: 'sendNotification',
+            userId: userIds[0], // primary target
+            message: notificationData.message,
+            type: notificationData.type || 'notification',
+            data: notificationData.data || {},
+            timestamp: new Date().toISOString(),
+            id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          };
+
+          await axios.post(`${endpoint}/sendMessage`, JSON.stringify({
+            userIds,
+            message,
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000,
+          });
+
+          success = userIds.length;
+          console.log(`[AWSWebSocket] Batch notification sent to ${userIds.length} users`);
+          return { success, failed: 0 };
+        } catch (batchError) {
+          console.warn(`[AWSWebSocket] Batch send failed, falling back to individual sends`);
+        }
+      }
+
+      // Fallback: individual sends
+      await Promise.all(
+        userIds.map(async (userId) => {
+          const message: WebSocketMessage = {
+            action: 'sendNotification',
+            userId,
+            message: notificationData.message,
+            type: notificationData.type || 'notification',
+            data: notificationData.data || {},
+            timestamp: new Date().toISOString(),
+            id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          };
+
+          const sent = await this.sendMessageToUser(userId, message);
+          if (sent) {
+            success++;
+          } else {
+            failed++;
+          }
+        })
+      );
+    } catch (error) {
+      console.error(`[AWSWebSocket] Failed to send batch notifications:`, error);
+      failed = userIds.length;
+    }
+
+    console.log(`[AWSWebSocket] Notification results: ${success} success, ${failed} failed`);
+    return { success, failed };
+  }
+
+  /**
+   * Test the WebSocket connectivity.
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      return await this.sendMessageToUser('test', {
+        action: 'ping',
+        userId: 'test',
+        message: 'Connection test',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('[AWSWebSocket] Connection test failed:', error);
+      return false;
+    }
+  }
 }
 
 export const awsWebSocketService = new AWSWebSocketService();

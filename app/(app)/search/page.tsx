@@ -19,17 +19,16 @@ export default function HotelsPage() {
   const [selectedCityId, setSelectedCityId] = useState("")
 
   return (
-    <div className="min-h-screen mt-4 lg:mt-0 p-4 lg:p-6 bg-zinc-800 text-white">
+    <div className="min-h-screen mt-4 lg:mt-0 p-4 lg:p-6 bg-background text-foreground">
       {/* Mobile: Filter button and drawer */}
-      <div className="lg:hidden mb-4 dark:bg-zinc-900 p-4 rounded-lg">
+      <div className="lg:hidden mb-4 p-4 rounded-lg">
         <Sheet>
           <SheetTrigger asChild>
             <Button className="w-full">Filter Hotels</Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-4/5 sm:w-3/5 bg-zinc-900 p-4">
-            {/* ✅ Added header and title for accessibility */}
+          <SheetContent side="left" className="w-4/5 sm:w-3/5 bg-background p-4">
             <SheetHeader>
-              <SheetTitle className="text-white text-lg">Filter Hotels</SheetTitle>
+              <SheetTitle className="text-foreground text-lg">Filter Hotels</SheetTitle>
             </SheetHeader>
 
             <div className="mt-4">
@@ -51,7 +50,7 @@ export default function HotelsPage() {
       {/* Desktop layout */}
       <div className="flex flex-col lg:flex-row">
         {/* Sidebar for desktop */}
-        <aside className="hidden lg:block lg:w-1/5 p-4 border-r border-gray-700 sticky top-0 h-fit">
+        <aside className="hidden lg:block lg:w-1/5 p-4 border-r border-border sticky top-0 h-fit">
           <SearchFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}

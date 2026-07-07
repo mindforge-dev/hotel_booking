@@ -95,7 +95,7 @@ export default function BookingDetailUI({ params }: { params: Promise<{ id: stri
                     {bookingData.room?.available || 0}
                   </span> of {bookingData.room?.total || 0} rooms available
                 </div>
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div className="flex-1 bg-muted rounded-full h-2">
                   <div
                     className="bg-blue-600 h-2 rounded-full"
                     style={{

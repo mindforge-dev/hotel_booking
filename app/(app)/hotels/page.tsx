@@ -12,30 +12,30 @@ import { Star, MapPin } from "lucide-react"
 const SkeletonCard = () => (
   <Card className="flex flex-col animate-pulse">
     <CardHeader className="p-0">
-      <div className="relative h-48 w-full bg-gray-200 rounded-t-lg" />
+      <div className="relative h-48 w-full bg-muted rounded-t-lg" />
     </CardHeader>
     <CardContent className="p-4 flex-grow">
       <div className="space-y-3">
-        <div className="h-6 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 rounded w-1/2" />
+        <div className="h-6 bg-muted rounded w-3/4" />
+        <div className="h-4 bg-muted rounded w-1/2" />
 
         <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-full" />
-          <div className="h-4 bg-gray-200 rounded w-4/5" />
+          <div className="h-4 bg-muted rounded w-full" />
+          <div className="h-4 bg-muted rounded w-4/5" />
         </div>
 
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-6 w-16 bg-gray-200 rounded-full" />
+            <div key={i} className="h-6 w-16 bg-muted rounded-full" />
           ))}
         </div>
 
         <div className="flex justify-between items-end">
           <div className="space-y-1">
-            <div className="h-6 bg-gray-200 rounded w-16" />
-            <div className="h-4 bg-gray-200 rounded w-12" />
+            <div className="h-6 bg-muted rounded w-16" />
+            <div className="h-4 bg-muted rounded w-12" />
           </div>
-          <div className="h-10 w-24 bg-gray-200 rounded-lg" />
+          <div className="h-10 w-24 bg-muted rounded-lg" />
         </div>
       </div>
     </CardContent>

@@ -157,7 +157,7 @@ export default function HotelDetailPage({
             {hotel?.rooms?.map((room: Room) => (
               <div
                 key={room.id}
-                className="flex flex-col md:flex-row border rounded-xl p-5 gap-5 shadow-sm bg-white"
+                className="flex flex-col md:flex-row border rounded-xl p-5 gap-5 shadow-sm bg-card"
               >
                 <div className="md:min-w-[160px] w-full md:w-[30%] h-40 relative rounded-lg overflow-hidden">
                   {room?.image ? (
@@ -170,8 +170,8 @@ export default function HotelDetailPage({
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                      <BedDouble className="h-10 w-10 text-gray-400" />
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <BedDouble className="h-10 w-10 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -182,14 +182,14 @@ export default function HotelDetailPage({
                       <h3 className="text-lg font-semibold">{room.name}</h3>
                       <div className="text-primary text-lg font-bold">
                         ${room.price}
-                        <span className="text-sm text-gray-500 font-normal"> / night</span>
+                        <span className="text-sm text-muted-foreground font-normal"> / night</span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {room.description || "Room details"}
                     </p>
                     <div className="flex gap-4 flex-wrap mt-2 text-sm">
-                      <div className="flex items-center gap-1 text-gray-700">
+                      <div className="flex items-center gap-1 text-foreground/80">
                         <Users className="h-4 w-4" />
                         Sleeps {room.maxOccupancy || room.available || 2}
                       </div>

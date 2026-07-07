@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { hotelId: string } }
+  { params }: { params: Promise<{ hotelId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -17,8 +17,10 @@ export async function GET(
       )
     }
 
+    const { hotelId } = await params;
+
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.hotelId },
+      where: { id: hotelId },
       include: {
         rooms: true,
         reviews: true,
@@ -45,7 +47,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { hotelId: string } }
+  { params }: { params: Promise<{ hotelId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -57,7 +59,7 @@ export async function PATCH(
       )
     }
 
-    const hotelId = params.hotelId
+    const { hotelId } = await params;
     const body = await req.json()
 
     // Validate hotel exists

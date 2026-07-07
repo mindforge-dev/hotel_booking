@@ -79,10 +79,10 @@ export function DataTable<TData extends RowWithId, TValue>({
     <div className="rounded-md border relative">
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 z-20 flex items-center justify-center">
+        <div className="absolute inset-0 bg-background/70 z-20 flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <p className="text-sm text-gray-600">Loading data...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+            <p className="text-sm text-muted-foreground">Loading data...</p>
           </div>
         </div>
       )}
@@ -190,7 +190,7 @@ export function DataTable<TData extends RowWithId, TValue>({
               <TableRow key={`loading-${index}`}>
                 {table.getAllColumns().map((column) => (
                   <TableCell key={`loading-cell-${column.id}-${index}`}>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                    <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
                   </TableCell>
                 ))}
               </TableRow>

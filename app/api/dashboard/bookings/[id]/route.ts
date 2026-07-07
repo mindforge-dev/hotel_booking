@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/dashboard/bookings/[id] - Get specific booking for dashboard
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await authGuard();
@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bookingId = params.id;
+    const { id } = await params;
+    const bookingId = id;
 
     const booking = await prisma.booking.findUnique({
       where: {
@@ -81,7 +82,7 @@ export async function GET(
 // PATCH /api/dashboard/bookings/[id] - Update booking status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await authGuard();
@@ -90,7 +91,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bookingId = params.id;
+    const { id } = await params;
+    const bookingId = id;
     const { status } = await request.json();
 
     if (!status || !["PENDING", "CONFIRMED", "CANCELLED"].includes(status)) {
@@ -149,7 +151,7 @@ export async function PATCH(
 // DELETE /api/dashboard/bookings/[id] - Delete specific booking
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await authGuard();
@@ -158,7 +160,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bookingId = params.id;
+    const { id } = await params;
+    const bookingId = id;
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },

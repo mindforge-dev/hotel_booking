@@ -40,7 +40,7 @@ export function SearchFilters({
   console.log('avialiable cities', selectedCityId)
 
   return (
-    <div className="w-full lg:max-w-xs space-y-6 bg-zinc-900 rounded-lg p-4 lg:sticky lg:top-6 lg:h-fit">
+    <div className="w-full lg:max-w-xs space-y-6 bg-card rounded-lg p-4 lg:sticky lg:top-6 lg:h-fit">
       {/* Search */}
       <div>
         <h3 className="text-sm font-semibold mb-2">Search</h3>

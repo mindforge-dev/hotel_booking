@@ -27,7 +27,7 @@ export default function LightboxGallery({ images, className }: LightboxGalleryPr
                         />
                     </div>
                 ) : (
-                    <div className="w-full h-64 md:h-80 bg-gray-100 rounded-lg" />
+                    <div className="w-full h-64 md:h-80 bg-muted rounded-lg" />
                 )}
             </div>
 

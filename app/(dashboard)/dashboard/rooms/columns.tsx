@@ -126,7 +126,7 @@ export const columns: ColumnDef<Room, unknown>[] = [
               {availabilityPercentage.toFixed(0)}%
             </Badge>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
+          <div className="w-full bg-muted rounded-full h-1.5">
             <div 
               className={`h-1.5 rounded-full ${
                 isLowAvailability ? 'bg-red-500' : 'bg-green-500'

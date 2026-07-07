@@ -4,10 +4,8 @@ import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 
 export default function SignIn() {
-  const router = useRouter()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -15,15 +13,11 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = await signIn("credentials", {
+    signIn("credentials", {
       email: formData.email,
       password: formData.password,
-      redirect: false,
+      callbackUrl: "/dashboard",
     })
-
-    if (result?.ok) {
-      router.push("/dashboard")
-    }
   }
 
   return (

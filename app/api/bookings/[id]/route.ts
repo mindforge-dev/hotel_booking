@@ -10,7 +10,7 @@ const updateBookingSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await authGuard();
@@ -18,7 +18,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bookingRoomId = params.id;
+    const { id } = await params;
+    const bookingRoomId = id;
 
     // Get the booking room with all related data
     const bookingRoom = await prisma.bookingRoom.findUnique({
@@ -70,7 +71,7 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await authGuard();
@@ -95,7 +96,8 @@ export async function PATCH(
     }
 
     const { status } = validation.data;
-    const bookingId = params.id;
+    const { id } = await params;
+    const bookingId = id;
 
     // Update the booking status
     const updatedBooking = await prisma.booking.update({
