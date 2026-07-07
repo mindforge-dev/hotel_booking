@@ -1,7 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { useNotifications, useDeleteNotification } from "@/hooks/dashboard/useNotifications";
+import { useDeleteNotification } from "@/hooks/dashboard/useNotifications";
+import { useRealtimeNotifications } from "@/hooks/dashboard/useRealtimeNotifications";
 import { BellRing, Check, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
@@ -11,7 +12,7 @@ export default function Page() {
   const userId = session?.user?.id;
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   
-  const { data: notifications = [], isLoading } = useNotifications(userId || "");
+  const { data: notifications = [], isLoading } = useRealtimeNotifications(userId || "");
   const deleteNotificationMutation = useDeleteNotification(userId || "");
   console.log(notifications)
   const handleDeleteNotification = async (notificationId: string) => {

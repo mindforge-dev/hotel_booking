@@ -10,6 +10,8 @@ export interface WebSocketMessage {
   id?: string;
   isRead?: boolean;
   createdAt?: string;
+  bookingId?: string;
+  status?: string;
 }
 
 export interface NotificationMessage {
@@ -29,7 +31,7 @@ export interface WebSocketNotificationPayload {
 }
 
 export interface WebSocketContextType {
+  sendNotification: (payload: Record<string, any>) => void;
   isConnected: boolean;
-  sendMessage: (message: WebSocketMessage) => void;
-  lastMessage: WebSocketMessage | null;
+  connectionState: string;
 }

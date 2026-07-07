@@ -4,16 +4,16 @@ import { getNotifications } from "@/services/notification";
 import { Notification } from "@prisma/client";
 import { notificationsQueryKey } from "./useNotifications";
 
-export const useRealtimeNotifications = (userId: string) => {
+export const useRealtimeNotifications = (userId: string | undefined) => {
   const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastCountRef = useRef<number>(0);
 
   // Base query for notifications
   const query = useQuery<Notification[]>({
-    queryKey: notificationsQueryKey(userId),
-    queryFn: () => getNotifications(userId),
-    enabled: !!userId,
+    queryKey: notificationsQueryKey(userId || ''),
+    queryFn: () => getNotifications(userId!),
+    enabled: !!userId && userId.trim() !== '',
     refetchOnWindowFocus: false,
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
@@ -21,7 +21,7 @@ export const useRealtimeNotifications = (userId: string) => {
 
   // Smart polling that only logs when count changes
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || userId.trim() === '') return;
 
     const pollForUpdates = async () => {
       try {

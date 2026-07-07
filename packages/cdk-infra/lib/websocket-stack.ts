@@ -37,15 +37,14 @@ export class WebSocketNotificationStack extends Stack {
         name: "connectionId",
         type: dynamodb.AttributeType.STRING,
       },
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // safe for dev; change to RETAIN for prod
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: true,
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      timeToLiveAttribute: "expireAt", // TTL for stale connections
+      timeToLiveAttribute: "expireAt",
     });
 
-    // GSI to look up connectionId by userId (for sending messages to a specific user)
     connectionsTable.addGlobalSecondaryIndex({
       indexName: "UserIdIndex",
       partitionKey: {
@@ -64,11 +63,9 @@ export class WebSocketNotificationStack extends Stack {
     });
 
     // ────────────────────────────────────────────────
-    // Lambda Handlers — bundled with esbuild via NodejsFunction
+    // Lambda Handlers
     // ────────────────────────────────────────────────
-    const connectHandler = new lambdaNodejs.NodejsFunction(this, "ConnectHandler", {
-      entry: path.join(__dirname, "../lambda/connect/index.ts"),
-      handler: "handler",
+    const handlerProps = {
       runtime: lambda.Runtime.NODEJS_20_X,
       timeout: Duration.seconds(30),
       memorySize: 256,
@@ -85,48 +82,24 @@ export class WebSocketNotificationStack extends Stack {
         format: lambdaNodejs.OutputFormat.ESM,
         externalModules: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb", "@aws-sdk/client-apigatewaymanagementapi"],
       },
+    };
+
+    const connectHandler = new lambdaNodejs.NodejsFunction(this, "ConnectHandler", {
+      entry: path.join(__dirname, "../lambda/connect/index.ts"),
+      handler: "handler",
+      ...handlerProps,
     });
 
     const disconnectHandler = new lambdaNodejs.NodejsFunction(this, "DisconnectHandler", {
       entry: path.join(__dirname, "../lambda/disconnect/index.ts"),
       handler: "handler",
-      runtime: lambda.Runtime.NODEJS_20_X,
-      timeout: Duration.seconds(30),
-      memorySize: 256,
-      environment: {
-        CONNECTIONS_TABLE_NAME: connectionsTable.tableName,
-        USER_ID_INDEX_NAME: "UserIdIndex",
-        LOG_LEVEL: "INFO",
-      },
-      layers: [sdkLayer],
-      bundling: {
-        minify: true,
-        sourceMap: true,
-        target: "es2020",
-        format: lambdaNodejs.OutputFormat.ESM,
-        externalModules: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb", "@aws-sdk/client-apigatewaymanagementapi"],
-      },
+      ...handlerProps,
     });
 
     const sendHandler = new lambdaNodejs.NodejsFunction(this, "SendMessageHandler", {
       entry: path.join(__dirname, "../lambda/sendMessage/index.ts"),
       handler: "handler",
-      runtime: lambda.Runtime.NODEJS_20_X,
-      timeout: Duration.seconds(30),
-      memorySize: 256,
-      environment: {
-        CONNECTIONS_TABLE_NAME: connectionsTable.tableName,
-        USER_ID_INDEX_NAME: "UserIdIndex",
-        LOG_LEVEL: "INFO",
-      },
-      layers: [sdkLayer],
-      bundling: {
-        minify: true,
-        sourceMap: true,
-        target: "es2020",
-        format: lambdaNodejs.OutputFormat.ESM,
-        externalModules: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb", "@aws-sdk/client-apigatewaymanagementapi"],
-      },
+      ...handlerProps,
     });
 
     // ────────────────────────────────────────────────
@@ -137,30 +110,21 @@ export class WebSocketNotificationStack extends Stack {
     connectionsTable.grantReadData(sendHandler);
 
     // ────────────────────────────────────────────────
-    // WebSocket API Gateway
+    // WebSocket API Gateway — using Lambda Proxy Integration
+    // WebSocketLambdaIntegration creates AWS_PROXY integration type,
+    // which passes the full event (requestContext, queryStringParameters, body)
+    // to the Lambda function.
     // ────────────────────────────────────────────────
     const webSocketApi = new apigw.WebSocketApi(this, "WebSocketApi", {
       apiName: `HotelBookingWebSocket-${stage}`,
       connectRouteOptions: {
-        integration: new apigwIntegration.WebSocketAwsIntegration("ConnectIntegration", {
-          integrationUri: `arn:aws:apigateway:${this.region}:lambda:path/2015-03-31/functions/${connectHandler.functionArn}/invocations`,
-          integrationMethod: "POST",
-          credentialsRole: this.createIntegrationRole(this, "ConnectIntegrationRole", connectHandler.functionArn),
-        }),
+        integration: new apigwIntegration.WebSocketLambdaIntegration("ConnectIntegration", connectHandler),
       },
       disconnectRouteOptions: {
-        integration: new apigwIntegration.WebSocketAwsIntegration("DisconnectIntegration", {
-          integrationUri: `arn:aws:apigateway:${this.region}:lambda:path/2015-03-31/functions/${disconnectHandler.functionArn}/invocations`,
-          integrationMethod: "POST",
-          credentialsRole: this.createIntegrationRole(this, "DisconnectIntegrationRole", disconnectHandler.functionArn),
-        }),
+        integration: new apigwIntegration.WebSocketLambdaIntegration("DisconnectIntegration", disconnectHandler),
       },
       defaultRouteOptions: {
-        integration: new apigwIntegration.WebSocketAwsIntegration("SendMessageIntegration", {
-          integrationUri: `arn:aws:apigateway:${this.region}:lambda:path/2015-03-31/functions/${sendHandler.functionArn}/invocations`,
-          integrationMethod: "POST",
-          credentialsRole: this.createIntegrationRole(this, "SendMessageIntegrationRole", sendHandler.functionArn),
-        }),
+        integration: new apigwIntegration.WebSocketLambdaIntegration("SendMessageIntegration", sendHandler),
       },
     });
 
@@ -169,15 +133,6 @@ export class WebSocketNotificationStack extends Stack {
       webSocketApi,
       stageName: stage,
       autoDeploy: true,
-    });
-
-    // Grant Lambda invoke permissions for the API Gateway
-    [connectHandler, disconnectHandler, sendHandler].forEach((handler) => {
-      handler.addPermission("ApiGatewayInvoke", {
-        principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-        action: "lambda:InvokeFunction",
-        sourceArn: webSocketApi.arnForExecuteApiV2(),
-      });
     });
 
     // Grant the send handler permission to manage WebSocket connections
@@ -216,33 +171,5 @@ export class WebSocketNotificationStack extends Stack {
       description: "AWS region of deployment",
       exportName: `WebSocketRegion-${stage}`,
     });
-
-    new CfnOutput(this, "SendMessageEndpoint", {
-      value: wsStage.callbackUrl,
-      description: "HTTP endpoint for sending messages to WebSocket connections",
-      exportName: `SendMessageEndpoint-${stage}`,
-    });
-  }
-
-  /**
-   * Creates an IAM role that allows API Gateway to invoke a Lambda function.
-   */
-  private createIntegrationRole(scope: Construct, id: string, functionArn: string): iam.IRole {
-    const role = new iam.Role(scope, id, {
-      assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      inlinePolicies: {
-        InvokeLambda: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              actions: ["lambda:InvokeFunction"],
-              resources: [functionArn],
-            }),
-          ],
-        }),
-      },
-    });
-
-    return role;
   }
 }

@@ -29,10 +29,9 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider>
-            
-              {children}
-
-        
+              <WebSocketProvider>
+                {children}
+              </WebSocketProvider>
             </ThemeProvider>
           </AuthProvider>
         </QueryProvider>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { simpleWebSocketService } from "@/services/simpleWebSocket";
+import { awsWebSocketService } from "@/services/awsWebSocket";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -47,19 +47,23 @@ export async function POST(request: Request) {
     );
 
     await Promise.all(notificationPromises);
-    
-    const result = {
-      success: targetUserIds.length,
-      failed: 0
-    };
 
-    console.log(`✅ Created test notifications for ${targetUserIds.length} users`);
+    // Also push via WebSocket for real-time delivery
+    const wsResult = await awsWebSocketService.sendNotificationToUsers(targetUserIds, {
+      message: message,
+      type: "test",
+    });
+
+    console.log(`Created test notifications for ${targetUserIds.length} users (DB + WebSocket: ${wsResult.success}/${wsResult.success + wsResult.failed})`);
 
     return NextResponse.json({
       success: true,
       message: `Test notification sent to ${targetUserIds.length} users`,
-      results: result,
-      targetUsers: targetUserIds
+      results: {
+        database: { success: targetUserIds.length, failed: 0 },
+        websocket: wsResult,
+      },
+      targetUsers: targetUserIds,
     });
 
   } catch (error) {

@@ -13,8 +13,15 @@ const TTL_HOURS = 24;
  *
  * Expected query string: ?userId=<user-id>
  */
-export const handler = async (event: any) => {
-  console.log("Connect event:", JSON.stringify(event, null, 2));
+export const handler = async (event: any, context: any) => {
+  console.log("--- Connect Handler Invoked ---");
+  console.log("typeof event:", typeof event);
+  console.log("Array.isArray(event):", Array.isArray(event));
+  console.log("Object.keys(event):", Object.keys(event || {}));
+  console.log("getOwnPropertyNames(event):", Object.getOwnPropertyNames(event || {}));
+  console.log("event stringified:", JSON.stringify(event));
+  console.log("event:", event);
+  console.log("context:", JSON.stringify(context));
 
   const connectionId = event.requestContext?.connectionId;
   if (!connectionId) {

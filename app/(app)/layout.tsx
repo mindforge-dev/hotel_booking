@@ -1,6 +1,5 @@
 "use client";
 import Navbar from "@/components/Navbar";
-import { WebSocketProvider } from "@/providers/webSocketProvider";
 export default function SiteLayout({
   children,
 }: {

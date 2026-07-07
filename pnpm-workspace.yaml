@@ -1,3 +1,6 @@
+packages:
+  - "packages/cdk-infra"
+
 onlyBuiltDependencies:
   - "@prisma/client"
   - "@prisma/engines"

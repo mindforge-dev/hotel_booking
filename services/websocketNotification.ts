@@ -1,33 +1,9 @@
-import axios from 'axios';
-import { WebSocketNotificationPayload } from '@/types/websocket';
+import { awsWebSocketService } from './awsWebSocket';
 
-export const sendWebSocketNotification = async (payload: WebSocketNotificationPayload) => {
-  try {
-    // You can either send directly to your AWS API Gateway WebSocket endpoint
-    // or create a server-side endpoint that handles WebSocket messaging
-    
-    // Option 1: Direct AWS API Gateway WebSocket call (if you have a REST API to trigger WebSocket)
-    const wsApiUrl = process.env.WEBSOCKET_API_URL;
-    if (wsApiUrl) {
-      const response = await axios.post(wsApiUrl, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return response.data;
-    }
-    
-    // Option 2: If you don't have a REST API, we'll need to use AWS SDK
-    // For now, we'll log the payload that should be sent
-    console.log('WebSocket notification payload:', payload);
-    return { success: true, payload };
-    
-  } catch (error) {
-    console.error('Failed to send WebSocket notification:', error);
-    throw error;
-  }
-};
-
+/**
+ * Send a booking notification to all admin users via the AWS WebSocket Lambda.
+ * Uses batch send through the DynamoDB-backed connection store.
+ */
 export const sendBookingNotificationToAdmins = async (
   adminUserIds: string[],
   bookingDetails: {
@@ -49,23 +25,21 @@ export const sendBookingNotificationToAdmins = async (
 
   const message = statusMessages[status];
 
-  const notifications = await Promise.all(
-    adminUserIds.map(userId =>
-      sendWebSocketNotification({
-        action: 'sendNotification',
-        userId,
-        message,
-        type: 'booking',
-        data: { 
-          ...bookingDetails,
-          status
-        }
-      })
-    )
-  );
+  const result = await awsWebSocketService.sendNotificationToUsers(adminUserIds, {
+    message,
+    type: 'booking',
+    data: {
+      ...bookingDetails,
+      status
+    }
+  });
 
-  return notifications;
+  return result;
 };
+
+/**
+ * Update all admins with a booking status change notification.
+ */
 export const updateBookingNotificationStatus = async (
   bookingId: string,
   status: 'ACCEPTED' | 'REJECTED',
@@ -80,16 +54,12 @@ export const updateBookingNotificationStatus = async (
     checkOut: string;
   }
 ) => {
-  // Send notification to admins about the status change
-  const notifications = await sendBookingNotificationToAdmins(
-    adminUserIds,
-    bookingDetails,
-    status
-  );
-
-  return notifications;
+  return sendBookingNotificationToAdmins(adminUserIds, bookingDetails, status);
 };
 
+/**
+ * Send a booking status update to the guest user via WebSocket.
+ */
 export const sendBookingStatusUpdateToGuest = async (
   guestUserId: string,
   bookingDetails: {
@@ -109,16 +79,14 @@ export const sendBookingStatusUpdateToGuest = async (
 
   const message = statusMessages[status];
 
-  const notification = await sendWebSocketNotification({
-    action: 'sendNotification',
-    userId: guestUserId,
+  const result = await awsWebSocketService.sendNotificationToUsers([guestUserId], {
     message,
     type: 'booking_status',
-    data: { 
+    data: {
       ...bookingDetails,
       status
     }
   });
 
-  return notification;
-}
+  return result;
+};
