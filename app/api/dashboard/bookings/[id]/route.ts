@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authGuard } from "@/lib/authGuard";
 import { prisma } from "@/lib/prisma";
+import { awsWebSocketService } from "@/services/awsWebSocket";
 
 // GET /api/dashboard/bookings/[id] - Get specific booking for dashboard
 export async function GET(
@@ -125,13 +126,30 @@ export async function PATCH(
     });
 
     // Create notification for status change
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: updatedBooking.userId,
         message: `Your booking for ${updatedBooking.hotel.name} has been ${status.toLowerCase()}`,
         isRead: false
       }
     });
+
+    // Push real-time notification to guest via WebSocket
+    try {
+      console.log(`[Booking PATCH] Pushing ${status} notification to guest ${updatedBooking.userId}`);
+      await awsWebSocketService.sendNotificationToUsers([updatedBooking.userId], {
+        message: notification.message,
+        type: "booking_status",
+        data: {
+          bookingId,
+          hotelName: updatedBooking.hotel.name,
+          status,
+        },
+      });
+      console.log(`[Booking PATCH] WebSocket push successful`);
+    } catch (err) {
+      console.error(`[Booking PATCH] WebSocket push failed:`, err);
+    }
 
     return NextResponse.json({
       success: true,
@@ -188,13 +206,30 @@ export async function DELETE(
     });
 
     // Create notification for booking deletion
-    await prisma.notification.create({
+    const deleteNotification = await prisma.notification.create({
       data: {
         userId: booking.userId,
         message: `Your booking for ${booking.hotel.name} has been cancelled`,
         isRead: false
       }
     });
+
+    // Push real-time cancellation notification to guest via WebSocket
+    try {
+      console.log(`[Booking DELETE] Pushing cancellation notification to guest ${booking.userId}`);
+      await awsWebSocketService.sendNotificationToUsers([booking.userId], {
+        message: deleteNotification.message,
+        type: "booking_status",
+        data: {
+          bookingId,
+          hotelName: booking.hotel.name,
+          status: "CANCELLED",
+        },
+      });
+      console.log(`[Booking DELETE] WebSocket push successful`);
+    } catch (err) {
+      console.error(`[Booking DELETE] WebSocket push failed:`, err);
+    }
 
     return NextResponse.json({
       success: true,

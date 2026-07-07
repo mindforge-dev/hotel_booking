@@ -80,11 +80,17 @@ export async function PATCH(
       };
 
       if (notificationStatus === 'ACCEPTED' || notificationStatus === 'REJECTED') {
-        await sendBookingStatusUpdateToGuest(
-          updatedBooking.userId,
-          bookingDetails,
-          notificationStatus
-        );
+        console.log(`[Booking Status] Sending ${notificationStatus} notification to guest ${updatedBooking.userId}`);
+        try {
+          const result = await sendBookingStatusUpdateToGuest(
+            updatedBooking.userId,
+            bookingDetails,
+            notificationStatus
+          );
+          console.log(`[Booking Status] sendBookingStatusUpdateToGuest result:`, result);
+        } catch (err) {
+          console.error(`[Booking Status] Failed to send notification to guest:`, err);
+        }
       }
 
    

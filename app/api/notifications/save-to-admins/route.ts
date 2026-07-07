@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { awsWebSocketService } from "@/services/awsWebSocket";
 
 const saveAdminNotificationSchema = z.object({
     message: z.string().min(1),
@@ -89,6 +90,19 @@ export async function POST(request: NextRequest) {
         );
 
         console.log(`✅ Created ${notifications.length} notifications for admin users`);
+
+        // Push notifications to admins via WebSocket
+        const adminUserIds = adminUsers.map(admin => admin.id);
+        try {
+            const pushResult = await awsWebSocketService.sendNotificationToUsers(adminUserIds, {
+                message,
+                type: type || 'notification',
+                data: { bookingId, status, action },
+            });
+            console.log(`📡 WebSocket push result: ${pushResult.success} success, ${pushResult.failed} failed`);
+        } catch (err) {
+            console.error("❌ WebSocket push failed:", err);
+        }
 
         return NextResponse.json({
             success: true,

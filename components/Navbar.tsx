@@ -7,7 +7,7 @@ import { Menu, X, UserCircle2, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useRealtimeNotifications } from '@/hooks/dashboard/useRealtimeNotifications'
+import { useNotifications } from '@/hooks/dashboard/useNotifications'
 
 const navLinks = [
   { name: 'Hotels', href: '/hotels' },
@@ -21,7 +21,7 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const { data: session } = useSession()
-  const { data: notifications = [], isLoading } = useRealtimeNotifications(session?.user?.id || undefined);
+  const { data: notifications = [], isLoading } = useNotifications(session?.user?.id);
 
 
   return (
@@ -95,7 +95,7 @@ export default function Navbar() {
                       )}
                       {notifications.length > 5 && (
                         <Link
-                          href="/dashboard/notifications"
+                          href="/notifications"
                           className="block text-center py-2 text-primary hover:text-primary/80 text-sm font-medium"
                           onClick={() => setNotificationOpen(false)}
                         >

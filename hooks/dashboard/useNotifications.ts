@@ -7,9 +7,11 @@ export const useNotifications = (userId: string | undefined) => {
   return useQuery<Notification[]>({
     queryKey: notificationsQueryKey(userId || ''),
     queryFn: () => getNotifications(userId!),
-    enabled: !!userId && userId.trim() !== '', // Only run query if userId is available and not empty
+    enabled: !!userId && userId.trim() !== '',
     refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
+    refetchOnMount: false, // Don't re-fetch if cache already has data (WebSocket keeps it fresh)
+    staleTime: 1000 * 60 * 5, // 5 minutes — WebSocket handles real-time updates
+    gcTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 
@@ -19,7 +21,6 @@ export const useDeleteNotification = (userId: string) => {
   return useMutation({
     mutationFn: deleteNotification,
     onSuccess: () => {
-      // Invalidate and refetch notifications after successful deletion
       queryClient.invalidateQueries({
         queryKey: notificationsQueryKey(userId)
       });
@@ -38,7 +39,6 @@ export const useUpdateNotificationStatus = (userId: string) => {
       status: 'REQUESTED' | 'ACCEPTED' | 'REJECTED'
     }) => updateNotificationStatus(notificationId, status),
     onSuccess: () => {
-      // Invalidate and refetch notifications after successful status update
       queryClient.invalidateQueries({
         queryKey: notificationsQueryKey(userId)
       });

@@ -91,20 +91,29 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
 
           if (data.action === "sendNotification") {
             // Update React Query cache so the bell badge updates immediately
-            queryClientRef.current.setQueryData(notificationsQueryKey(session.user.id), (old: any[] = []) => [
-              {
-                id: data.id || `ws_${Date.now()}`,
-                userId: data.userId || session.user.id,
-                message: data.message,
-                bookingId: data.bookingId,
-                status: data.status,
-                type: data.type,
-                isRead: false,
-                createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
-                ...data,
-              },
-              ...(old ?? []),
-            ]);
+            const newNotification = {
+              id: data.id || `ws_${Date.now()}`,
+              userId: data.userId || session.user.id,
+              message: data.message,
+              bookingId: data.bookingId,
+              status: data.status,
+              type: data.type,
+              isRead: false,
+              createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
+              ...data,
+            };
+
+            queryClientRef.current.setQueryData(notificationsQueryKey(session.user.id), (old: any[] = []) => {
+              // Deduplicate: skip if a notification with the same id or message+createdAt already exists
+              const existing = old ?? [];
+              const isDuplicate = existing.some(
+                (n: any) =>
+                  n.id === newNotification.id ||
+                  (n.message === newNotification.message && n.createdAt === newNotification.createdAt)
+              );
+              if (isDuplicate) return existing;
+              return [newNotification, ...existing];
+            });
 
             // Show a toast popup (deduplicated within TOAST_DEDUP_MS)
             const now = Date.now();

@@ -61,6 +61,8 @@ export class AWSWebSocketService {
     this.tableName = process.env.CONNECTIONS_TABLE_NAME || "WebSocketConnections-dev";
     this.userIdIndex = process.env.USER_ID_INDEX_NAME || "UserIdIndex";
 
+    console.log(`[AWSWebSocket] Initialized — API URL: ${apiUrl}, API ID: ${this.apiId}, Table: ${this.tableName}`);
+
     if (!this.apiId) {
       console.warn("[AWSWebSocket] Cannot extract API ID from WEBSOCKET_API_URL");
     }
@@ -162,7 +164,7 @@ export class AWSWebSocketService {
       type: notificationData.type || "notification",
       data: notificationData.data || {},
       timestamp: new Date().toISOString(),
-      id: `notification_${Date.now()}`,
+      id: `notification_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       isRead: false,
       createdAt: new Date().toISOString(),
     };

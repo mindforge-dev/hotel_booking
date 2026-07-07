@@ -6,17 +6,17 @@ import { BellRing, Check, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 
-export default function Page() {
+export default function NotificationsPage() {
   const { data: session } = useSession();
   const userId = session?.user?.id;
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-  
+
   const { data: notifications = [], isLoading } = useNotifications(userId);
   const deleteNotificationMutation = useDeleteNotification(userId || "");
-  console.log(notifications)
+
   const handleDeleteNotification = async (notificationId: string) => {
     setDeletingIds(prev => new Set(prev).add(notificationId));
-    
+
     try {
       await deleteNotificationMutation.mutateAsync(notificationId);
     } catch (error) {
@@ -94,12 +94,6 @@ export default function Page() {
               </div>
             </Card>
           ))}
-        </div>
-      )}
-
-      {notifications.length > 0 && (
-        <div className="mt-8 text-center">
-          <Button variant="outline">Load More</Button>
         </div>
       )}
     </div>

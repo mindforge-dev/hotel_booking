@@ -33,7 +33,7 @@ import {
 } from "../ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { Input } from "../ui/input"
-import { useRealtimeNotifications } from "@/hooks/dashboard/useRealtimeNotifications"
+import { useNotifications } from "@/hooks/dashboard/useNotifications"
 import { useEffect, useState } from "react"
 import { NavbarProps } from "@/types/ui"
 
@@ -45,8 +45,8 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
     setMounted(true)
   }, [])
 
-  const { data: notifications = [], isLoading } = useRealtimeNotifications(
-    session?.user?.id || undefined
+  const { data: notifications = [], isLoading } = useNotifications(
+    session?.user?.id
   )
 
   const unreadCount = notifications?.filter(notification => !notification.isRead)?.length || 0
