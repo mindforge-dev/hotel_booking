@@ -1,0 +1,12 @@
+{
+  "app": "npx ts-node --project tsconfig.json bin/app.ts",
+  "watch": {
+    "include": ["bin/**/*.ts", "lib/**/*.ts", "lambda/**/*.ts"],
+    "exclude": ["node_modules", "cdk.out", "dist"]
+  },
+  "output": "cdk.out",
+  "context": {
+    "@aws-cdk/core:newStyleStackSynthesis": true,
+    "@aws-cdk/core:stackRelativeExports": true
+  }
+}

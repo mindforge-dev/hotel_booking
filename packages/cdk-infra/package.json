@@ -1,0 +1,33 @@
+{
+  "name": "hotel-booking-cdk-infra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS CDK infrastructure for hotel booking real-time notifications (WebSocket, Lambda, DynamoDB)",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "synth": "AWS_PROFILE=thz-aws cdk synth",
+    "deploy": "AWS_PROFILE=thz-aws pnpx cdk deploy --require-approval never",
+    "deploy:dev": "AWS_PROFILE=thz-aws pnpx cdk deploy WebSocketNotificationStack --require-approval never -c stage=dev",
+    "destroy": "AWS_PROFILE=thz-aws pnpx cdk destroy WebSocketNotificationStack --require-approval never",
+    "diff": "AWS_PROFILE=thz-aws pnpx cdk diff",
+    "bootstrap": "AWS_PROFILE=thz-aws pnpx cdk bootstrap",
+    "postinstall": "npm run build:layer",
+    "build:layer": "cd layer/sdk/nodejs && npm install && cd ../../../"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.187.0",
+    "constructs": "^10.4.2",
+    "@aws-sdk/client-dynamodb": "^3.858.0",
+    "@aws-sdk/lib-dynamodb": "^3.858.0",
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.858.0",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "aws-cdk": "^2.187.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
