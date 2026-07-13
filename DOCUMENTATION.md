@@ -75,6 +75,38 @@ The application uses Next.js 13+ App Router with route groups:
 - `(dashboard)` - Admin dashboard
 - `api` - API endpoints
 
+### Real-time WebSocket Architecture
+The project supports real-time notifications (e.g. for hotel bookings and administrative alerts) through a dedicated AWS CDK WebSocket infrastructure connected to the Next.js client.
+
+#### Infrastructure Diagram
+![CDK WebSocket Infrastructure](infrastructure-composer-WebSocketNotificationStack-dev.yaml.png)
+
+```
+┌──────────────────┐        ┌─────────────────────┐        ┌───────────────────┐
+│   Next.js App    │◄──────►│  API Gateway WS API  │◄──────►│  Lambda Handlers   │
+│   (Frontend)     │  WSS   │  wss://.../dev       │  invoke │  connect/disconnect│
+│                  │        │                      │        │  sendMessage       │
+└──────────────────┘        └─────────────────────┘        └─────────┬─────────┘
+                                                                      │
+                                                                      ▼
+                                                           ┌───────────────────┐
+                                                           │  DynamoDB          │
+                                                           │  WebSocketConn-    │
+                                                           │  ections (TTL 24h)  │
+                                                           │  PK: connectionId   │
+                                                           │  GSI: userId        │
+                                                           └───────────────────┘
+```
+
+#### Client-side Connection Handling (`WebSocketProvider`)
+Located in [webSocketProvider.tsx](file:///home/thz/Desktop/projects/hotel_booking/providers/webSocketProvider.tsx), the client handles WebSocket sessions:
+* **Lifecycle & Scope**: Initiated automatically upon user authentication (`status === "authenticated"`). Connections are cached in a React Ref to prevent duplicate connections on re-render, and cleaned up on unmount or logout.
+* **Auto-Reconnection**: Automatically attempts reconnection up to 5 times (3-second delay) on unclean closures.
+* **State Synchronization**: Upon receiving a notification (`action: "sendNotification"`), it directly updates the local React Query query cache (`notificationsQueryKey`) so badges update instantly without reloading the page. It also triggers a toast alert (throttled to a 3-second window).
+* **Outgoing Messages**: Dispatches updates through backend service helpers (REST) rather than raw WS socket commands to act as a fail-safe, non-blocking pipeline.
+
+Detailed setup and stack architecture instructions are located in the [CDK Infrastructure README](file:///home/thz/Desktop/projects/hotel_booking/packages/cdk-infra/README.md).
+
 ## Database Schema
 
 ### Core Models
