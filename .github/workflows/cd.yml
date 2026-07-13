@@ -12,6 +12,7 @@ jobs:
   deploy:
     name: Build & Deploy to VPS
     runs-on: ubuntu-latest
+    environment: hotel_deployment
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,12 +37,26 @@ jobs:
       - name: Build Next.js application
         run: pnpm build
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Ensure deploy directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "mkdir -p ${{ secrets.VPS_DEPLOY_PATH }}"
+
       - name: Create deployment archive
         run: |
           tar -czf /tmp/deploy.tar.gz \
             .next/ \
             public/ \
             prisma/ \
+            prisma.config.ts \
             package.json \
             pnpm-lock.yaml \
             pnpm-workspace.yaml \
@@ -54,70 +69,47 @@ jobs:
             Dockerfile \
             docker-compose.yml
 
-      - name: Setup SSH key
+      - name: Upload archive to VPS
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Upload deployment archive to VPS
-        run: |
-          scp -o StrictHostKeyChecking=no \
-              -i ~/.ssh/deploy_key \
-              /tmp/deploy.tar.gz \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy.tar.gz
+          scp -i ~/.ssh/deploy_key \
+            /tmp/deploy.tar.gz \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy.tar.gz
 
       - name: Deploy on VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -euo pipefail
-
-            DEPLOY_PATH="${{ secrets.VPS_DEPLOY_PATH }}"
-            cd "$DEPLOY_PATH"
-
-            # Extract the deployment archive
-            echo "📦 Extracting build output..."
-            tar -xzf /tmp/deploy.tar.gz
-            rm /tmp/deploy.tar.gz
-
-            # Run database migrations
-            echo "🗄️ Running database migrations..."
-            npx prisma migrate deploy
-
-            # Restart the application with pm2
-            echo "🔄 Restarting application..."
-            if pm2 describe hotel-booking > /dev/null 2>&1; then
-              pm2 restart hotel-booking
-            else
-              pm2 start npm --name "hotel-booking" -- start
-            fi
-            pm2 save
-
-            # Health check
-            echo "⏳ Waiting for application health check..."
-            sleep 10
-
-            MAX_RETRIES=30
-            RETRY_COUNT=0
-
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-                echo "✅ Application is healthy and deployed!"
-                exit 0
-              fi
-
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "  Attempt $RETRY_COUNT/$MAX_RETRIES - waiting..."
-              sleep 5
-            done
-
-            echo "❌ Health check failed after $MAX_RETRIES attempts"
-            pm2 logs hotel-booking --lines 50 --nostream
-            exit 1
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "set -euo pipefail && \
+             cd ${{ secrets.VPS_DEPLOY_PATH }} && \
+             echo '📦 Extracting build output...' && \
+             tar -xzf /tmp/deploy.tar.gz && \
+             rm /tmp/deploy.tar.gz && \
+             echo '🗄️ Running database migrations...' && \
+             npx prisma migrate deploy && \
+             echo '🌱 Seeding database...' && \
+             npx prisma db seed || echo '⚠️ Seed already applied or skipped' && \
+             echo '🔄 Restarting application...' && \
+             if pm2 describe hotel-booking > /dev/null 2>&1; then \
+               pm2 restart hotel-booking; \
+             else \
+               pm2 start npm --name hotel-booking -- start; \
+             fi && \
+             pm2 save && \
+             echo '⏳ Health check...' && \
+             sleep 10 && \
+             RETRY=0 && \
+             while [ \$RETRY -lt 30 ]; do \
+               if curl -sf http://localhost:3000 > /dev/null 2>&1; then \
+                 echo '✅ Application is healthy and deployed!'; \
+                 exit 0; \
+               fi; \
+               RETRY=\$((RETRY + 1)); \
+               echo \"  Attempt \$RETRY/30 - waiting...\"; \
+               sleep 5; \
+             done && \
+             echo '❌ Health check failed' && \
+             pm2 logs hotel-booking --lines 50 --nostream && \
+             exit 1"
 
       - name: Cleanup SSH key
         if: always()
