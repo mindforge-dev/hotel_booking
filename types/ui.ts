@@ -51,6 +51,8 @@ export interface BaseModalProps {
 // Navigation Types
 export interface NavbarProps {
   onMenuClick: () => void;
+  onSidebarToggle?: () => void;
+  sidebarOpen?: boolean;
 }
 
 export interface SidebarToggleProps {

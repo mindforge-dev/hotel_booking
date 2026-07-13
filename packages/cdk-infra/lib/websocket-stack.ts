@@ -1,10 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import {
-  Stack,
-  StackProps,
-  Duration,
-  CfnOutput,
-} from "aws-cdk-lib";
+import { Stack, StackProps, Duration, CfnOutput } from "aws-cdk-lib";
 import * as apigw from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigwIntegration from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
@@ -22,7 +17,7 @@ export class WebSocketNotificationStack extends Stack {
   constructor(
     scope: Construct,
     id: string,
-    props: WebSocketNotificationStackProps
+    props: WebSocketNotificationStackProps,
   ) {
     super(scope, id, props);
 
@@ -80,27 +75,43 @@ export class WebSocketNotificationStack extends Stack {
         sourceMap: true,
         target: "es2020",
         format: lambdaNodejs.OutputFormat.ESM,
-        externalModules: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb", "@aws-sdk/client-apigatewaymanagementapi"],
+        externalModules: [
+          "@aws-sdk/client-dynamodb",
+          "@aws-sdk/lib-dynamodb",
+          "@aws-sdk/client-apigatewaymanagementapi",
+        ],
       },
     };
 
-    const connectHandler = new lambdaNodejs.NodejsFunction(this, "ConnectHandler", {
-      entry: path.join(__dirname, "../lambda/connect/index.ts"),
-      handler: "handler",
-      ...handlerProps,
-    });
+    const connectHandler = new lambdaNodejs.NodejsFunction(
+      this,
+      "ConnectHandler",
+      {
+        entry: path.join(__dirname, "../lambda/connect/index.ts"),
+        handler: "handler",
+        ...handlerProps,
+      },
+    );
 
-    const disconnectHandler = new lambdaNodejs.NodejsFunction(this, "DisconnectHandler", {
-      entry: path.join(__dirname, "../lambda/disconnect/index.ts"),
-      handler: "handler",
-      ...handlerProps,
-    });
+    const disconnectHandler = new lambdaNodejs.NodejsFunction(
+      this,
+      "DisconnectHandler",
+      {
+        entry: path.join(__dirname, "../lambda/disconnect/index.ts"),
+        handler: "handler",
+        ...handlerProps,
+      },
+    );
 
-    const sendHandler = new lambdaNodejs.NodejsFunction(this, "SendMessageHandler", {
-      entry: path.join(__dirname, "../lambda/sendMessage/index.ts"),
-      handler: "handler",
-      ...handlerProps,
-    });
+    const sendHandler = new lambdaNodejs.NodejsFunction(
+      this,
+      "SendMessageHandler",
+      {
+        entry: path.join(__dirname, "../lambda/sendMessage/index.ts"),
+        handler: "handler",
+        ...handlerProps,
+      },
+    );
 
     // ────────────────────────────────────────────────
     // Grant DynamoDB permissions to all handlers
@@ -118,13 +129,22 @@ export class WebSocketNotificationStack extends Stack {
     const webSocketApi = new apigw.WebSocketApi(this, "WebSocketApi", {
       apiName: `HotelBookingWebSocket-${stage}`,
       connectRouteOptions: {
-        integration: new apigwIntegration.WebSocketLambdaIntegration("ConnectIntegration", connectHandler),
+        integration: new apigwIntegration.WebSocketLambdaIntegration(
+          "ConnectIntegration",
+          connectHandler,
+        ),
       },
       disconnectRouteOptions: {
-        integration: new apigwIntegration.WebSocketLambdaIntegration("DisconnectIntegration", disconnectHandler),
+        integration: new apigwIntegration.WebSocketLambdaIntegration(
+          "DisconnectIntegration",
+          disconnectHandler,
+        ),
       },
       defaultRouteOptions: {
-        integration: new apigwIntegration.WebSocketLambdaIntegration("SendMessageIntegration", sendHandler),
+        integration: new apigwIntegration.WebSocketLambdaIntegration(
+          "SendMessageIntegration",
+          sendHandler,
+        ),
       },
     });
 
@@ -141,8 +161,10 @@ export class WebSocketNotificationStack extends Stack {
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ["execute-api:ManageConnections"],
-        resources: [`arn:aws:execute-api:${this.region}:${this.account}:${webSocketApi.apiId}/${stage}/*/@connections/*`],
-      })
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${webSocketApi.apiId}/${stage}/*/@connections/*`,
+        ],
+      }),
     );
 
     // ────────────────────────────────────────────────

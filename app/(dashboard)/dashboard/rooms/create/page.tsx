@@ -9,123 +9,141 @@ export default async function CreateRoomPage() {
     const hotels = await getHotels();
 
     return (
-        <div className="bg-background text-foreground p-6 rounded-md shadow">
-            <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl font-semibold mb-6">Create Room</h1>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold">Create Room</h1>
+                <p className="text-muted-foreground">Add a new room to your hotel inventory</p>
+            </div>
 
-                <Form action={createRoom} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Hotel</label>
-                        <select
-                            name="hotelId"
-                            className="w-full bg-background border border-border rounded-md p-3"
-                            required
-                        >
-                            <option value="">Select hotel</option>
-                            {hotels.map((hotel) => (
-                                <option key={hotel.id} value={hotel.id}>
-                                    {hotel.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Name</label>
-                        <input
-                            name="name"
-                            className="w-full bg-background border border-border rounded-md p-3"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Room Type</label>
+            <Form action={createRoom} className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left column */}
+                    <div className="space-y-6">
+                        {/* Hotel select */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium">Hotel</label>
                             <select
-                                name="roomType"
+                                name="hotelId"
                                 className="w-full bg-background border border-border rounded-md p-3"
                                 required
                             >
-                                <option value="">Select room type</option>
-                                <option value="SINGLE">Single</option>
-                                <option value="DOUBLE">Double</option>
-                                <option value="TWIN">Twin</option>
-                                <option value="SUITE">Suite</option>
-                                <option value="FAMILY">Family</option>
+                                <option value="">Select hotel</option>
+                                {hotels.map((hotel) => (
+                                    <option key={hotel.id} value={hotel.id}>
+                                        {hotel.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">
-                                Price Per Night
-                            </label>
+
+                        {/* Name */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium">Room Name</label>
                             <input
-                                type="number"
-                                name="price"
-                                min="0"
+                                name="name"
+                                placeholder="e.g. Deluxe Ocean View"
                                 className="w-full bg-background border border-border rounded-md p-3"
-                                required
                             />
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Total Rooms</label>
-                            <input
-                                type="number"
-                                name="totalRooms"
-                                min="1"
-                                className="w-full bg-background border border-border rounded-md p-3"
-                                required
-                            />
+                        {/* Room Type + Price */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium">Room Type</label>
+                                <select
+                                    name="roomType"
+                                    className="w-full bg-background border border-border rounded-md p-3"
+                                    required
+                                >
+                                    <option value="">Select type</option>
+                                    <option value="SINGLE">Single</option>
+                                    <option value="DOUBLE">Double</option>
+                                    <option value="TWIN">Twin</option>
+                                    <option value="SUITE">Suite</option>
+                                    <option value="FAMILY">Family</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium">Price Per Night ($)</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    min="0"
+                                    placeholder="0.00"
+                                    className="w-full bg-background border border-border rounded-md p-3"
+                                    required
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">
-                                Available Rooms
-                            </label>
-                            <input
-                                type="number"
-                                name="availableRooms"
-                                min="0"
-                                className="w-full bg-background border border-border rounded-md p-3"
-                                required
-                            />
+
+                        {/* Total + Available */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium">Total Rooms</label>
+                                <input
+                                    type="number"
+                                    name="totalRooms"
+                                    min="1"
+                                    placeholder="0"
+                                    className="w-full bg-background border border-border rounded-md p-3"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium">Available Rooms</label>
+                                <input
+                                    type="number"
+                                    name="availableRooms"
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full bg-background border border-border rounded-md p-3"
+                                    required
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Image Upload Component */}
-                    <ImageUploadClient />
+                    {/* Right column */}
+                    <div className="space-y-6">
+                        {/* Image Upload */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium">Room Images</label>
+                            <ImageUploadClient />
+                        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Amenities</label>
-                        <p className="text-sm text-muted-foreground mb-2">
-                            Select the amenities available at this hotel
-                        </p>
-                        <div className="grid grid-cols-3 gap-y-2 gap-x-4">
-                            {amenitiesList.map((amenity) => (
-                                <label key={amenity} className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        name="amenities"
-                                        value={amenity}
-                                        className="form-checkbox h-5 w-5 text-primary bg-background border-border"
-                                    />
-                                    <span>{amenity}</span>
-                                </label>
-                            ))}
+                        {/* Amenities */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium">Amenities</label>
+                            <p className="text-sm text-muted-foreground">
+                                Select the amenities available for this room
+                            </p>
+                            <div className="grid grid-cols-3 gap-3 p-4 border rounded-md">
+                                {amenitiesList.map((amenity) => (
+                                    <label key={amenity} className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="amenities"
+                                            value={amenity}
+                                            className="form-checkbox h-4 w-4 text-primary bg-background border-border rounded"
+                                        />
+                                        <span className="text-sm">{amenity}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <button
-                            type="submit"
-                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium text-white"
-                        >
-                            Create Room
-                        </button>
-                    </div>
-                </Form>
-            </div>
+                {/* Submit */}
+                <div className="flex items-center gap-3 pt-4 border-t">
+                    <button
+                        type="submit"
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-md font-medium text-white transition-colors"
+                    >
+                        Create Room
+                    </button>
+                </div>
+            </Form>
         </div>
     );
 }

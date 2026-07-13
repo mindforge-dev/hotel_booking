@@ -16,7 +16,7 @@ export default function SignIn() {
     signIn("credentials", {
       email: formData.email,
       password: formData.password,
-      callbackUrl: "/dashboard",
+      callbackUrl: "/", // middleware handles role-based redirect
     })
   }
 
@@ -81,7 +81,7 @@ export default function SignIn() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              onClick={() => signIn("google", { callbackUrl: "/" })}
             >
               Continue with Google
             </Button>

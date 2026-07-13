@@ -68,6 +68,20 @@ export async function POST(request: Request) {
       },
     });
 
+    // Award loyalty points for booking
+    try {
+      await prisma.loyaltyPoint.create({
+        data: {
+          userId,
+          points: 100,
+          description: `Points earned for booking at hotel (Booking ID: ${booking.id})`,
+          source: "BOOKING",
+          bookingId: booking.id,
+        },
+      });
+    } catch (err) {
+      console.error("[Booking] Failed to award loyalty points:", err);
+    }
 
     return NextResponse.json(
       {

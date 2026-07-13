@@ -171,6 +171,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   const sendNotification = useCallback(async (payload: Record<string, any>) => {
     const isBookingNotification = payload.type === 'booking' || payload.bookingId;
 
+    // Fire-and-forget: notifications should never block or break the calling code
     try {
       if (isBookingNotification) {
         await saveNotificationToAdmins({
@@ -194,8 +195,8 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
 
         // Update local query cache for regular notifications
         if (session?.user?.id) {
-          queryClientRef.current.setQueryData(notificationsQueryKey(session.user.id), (old: any[] = []) => [
-            {
+          queryClientRef.current.setQueryData(notificationsQueryKey(session.user.id), (old: any[] = []) => {
+            const newNotification = {
               id: `temp_${Date.now()}`,
               userId: payload.userId || session.user.id,
               message: payload.message,
@@ -204,22 +205,23 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
               isRead: false,
               createdAt: new Date().toISOString(),
               ...payload
-            },
-            ...(old ?? []),
-          ]);
+            };
+
+            // Deduplicate
+            const existing = old ?? [];
+            const isDuplicate = existing.some(
+              (n: any) =>
+                n.id === newNotification.id ||
+                (n.message === newNotification.message && n.createdAt === newNotification.createdAt)
+            );
+            if (isDuplicate) return existing;
+            return [newNotification, ...existing];
+          });
         }
       }
     } catch (error) {
-      console.error("[WebSocket] Failed to save notification to database:", error);
-    }
-
-    // Send via WebSocket (if connected)
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      try {
-        ws.current.send(JSON.stringify(payload));
-      } catch (error) {
-        console.warn("[WebSocket] Failed to send message:", error);
-      }
+      // Never throw — notification failures must not affect booking flow
+      console.error("[WebSocket] Notification delivery failed (non-blocking):", error);
     }
   }, [session?.user?.id]);
 

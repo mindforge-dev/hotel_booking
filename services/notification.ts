@@ -3,14 +3,8 @@ import axios from "axios";
 export const getNotifications = async (userId: string) => {
   try {
     const response = await axios.get('/api/dashboard/notifications', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      params: {
-        userId: userId, 
-      },
+      params: { userId },
     });
-    console.log("Fetched notifications:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -20,15 +14,16 @@ export const getNotifications = async (userId: string) => {
 
 export const deleteNotification = async (notificationId: string) => {
   try {
-    const response = await axios.delete(`/api/dashboard/notifications/${notificationId}`);
+    const response = await axios.delete(`/api/user/notifications/${notificationId}`);
     return response.data;
   } catch (error) {
     console.error("Error deleting notification:", error);
     throw error;
   }
 };
+
 export const updateNotificationStatus = async (
-  notificationId: string, 
+  notificationId: string,
   status: 'REQUESTED' | 'ACCEPTED' | 'REJECTED'
 ) => {
   try {
@@ -39,8 +34,6 @@ export const updateNotificationStatus = async (
         'Content-Type': 'application/json',
       },
     });
-
-    console.log("Updated notification status:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error updating notification status:", error);
@@ -65,8 +58,6 @@ export const createBookingNotification = async (
         'Content-Type': 'application/json',
       },
     });
-
-    console.log("Created booking notification:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error creating booking notification:", error);
@@ -89,11 +80,9 @@ export const saveNotification = async (notificationData: {
         'Content-Type': 'application/json',
       },
     });
-
-    console.log("✅ Notification saved:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error saving notification:", error);
+    console.error("Error saving notification:", error);
     throw error;
   }
 };
@@ -112,11 +101,9 @@ export const saveNotificationToAdmins = async (notificationData: {
         'Content-Type': 'application/json',
       },
     });
-
-    console.log("✅ Admin notifications saved:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error saving admin notifications:", error);
+    console.error("Error saving admin notifications:", error);
     throw error;
   }
 };

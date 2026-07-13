@@ -11,7 +11,9 @@ import {
   Hotel,
   BarChart3,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  PanelLeft,
+  PanelLeftClose
 } from "lucide-react"
 import { Button } from "../ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -37,7 +39,7 @@ import { useNotifications } from "@/hooks/dashboard/useNotifications"
 import { useEffect, useState } from "react"
 import { NavbarProps } from "@/types/ui"
 
-export function DashboardNavbar({ onMenuClick }: NavbarProps) {
+export function DashboardNavbar({ onMenuClick, onSidebarToggle, sidebarOpen = true }: NavbarProps) {
   const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
 
@@ -56,8 +58,8 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onMenuClick} className="md:hidden">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon">
+              <PanelLeft className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-2">
               <Hotel className="h-6 w-6 text-primary" />
@@ -85,8 +87,17 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
       <div className="flex h-16 items-center justify-between px-6">
         {/* Left Section */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onMenuClick} className="md:hidden">
-            <Menu className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSidebarToggle || onMenuClick}
+            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          >
+            {sidebarOpen ? (
+              <PanelLeftClose className="h-5 w-5" />
+            ) : (
+              <PanelLeft className="h-5 w-5" />
+            )}
           </Button>
 
           <div className="flex items-center gap-3">

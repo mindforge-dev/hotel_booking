@@ -1,20 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "typeRoots": [
       "./node_modules/@types",
       "./types", // pnpm sometimes needs this explicit path
       "./types/react-table" // Explicitly include react-table types
     ],
-    "types": [
-      "next",
-      "node",
-    ],
+    "types": ["next", "node"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -32,9 +25,7 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -44,7 +35,5 @@
     ".next/types/**/*.ts",
     "types/**/*.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

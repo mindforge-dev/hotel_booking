@@ -95,7 +95,7 @@ export default function Navbar() {
                       )}
                       {notifications.length > 5 && (
                         <Link
-                          href="/notifications"
+                          href="/user/notifications"
                           className="block text-center py-2 text-primary hover:text-primary/80 text-sm font-medium"
                           onClick={() => setNotificationOpen(false)}
                         >
