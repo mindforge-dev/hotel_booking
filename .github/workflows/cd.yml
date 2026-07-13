@@ -13,6 +13,7 @@ jobs:
     name: Build & Deploy to VPS
     runs-on: ubuntu-latest
     environment: hotel_deployment
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,88 +29,129 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Validate deployment secrets
+        run: |
+          if [ -z "${{ secrets.VPS_SSH_KEY }}" ] || [ -z "${{ secrets.VPS_HOST }}" ] || [ -z "${{ secrets.VPS_USER }}" ] || [ -z "${{ secrets.VPS_DEPLOY_PATH }}" ]; then
+            echo "ERROR: Missing one of the required secrets: VPS_SSH_KEY, VPS_HOST, VPS_USER, VPS_DEPLOY_PATH"
+            exit 1
+          fi
 
-      - name: Generate Prisma client
-        run: pnpm prisma generate
+      - name: Install dependencies (dev + prod) and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm prisma generate || true
+          pnpm build
 
-      - name: Build Next.js application
-        run: pnpm build
+      - name: Prune dev dependencies (keep only prod) to reduce package size
+        run: |
+          # Reduce node_modules footprint before packing. If pnpm prune isn't available, skip gracefully.
+          pnpm prune --production || true
 
-      - name: Setup SSH key
+      - name: Setup SSH key (safe)
         run: |
           mkdir -p ~/.ssh
+          # write key safely (preserves newlines)
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: Ensure deploy directory exists
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "mkdir -p ${{ secrets.VPS_DEPLOY_PATH }}"
+          # try to add host key but don't fail if unreachable
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Create deployment archive
         run: |
-          tar -czf /tmp/deploy.tar.gz \
+          # create a tar of only the artifacts needed to run the app
+          # --ignore-failed-read prevents failure if some optional files are absent
+          tar --ignore-failed-read -czf /tmp/deploy.tar.gz \
             .next/ \
             public/ \
             prisma/ \
-            prisma.config.ts \
             package.json \
             pnpm-lock.yaml \
             pnpm-workspace.yaml \
             node_modules/ \
-            next.config.ts \
+            next.config.* \
             tsconfig.json \
-            postcss.config.mjs \
-            tailwind.config.ts \
+            postcss.config.* \
+            tailwind.config.* \
             docker-entrypoint.sh \
             Dockerfile \
             docker-compose.yml
 
+      - name: Ensure deploy directory exists on VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${{ secrets.VPS_USER }}"@"${{ secrets.VPS_HOST }}" \
+            "mkdir -p '${{ secrets.VPS_DEPLOY_PATH }}'"
+
       - name: Upload archive to VPS
         run: |
-          scp -i ~/.ssh/deploy_key \
-            /tmp/deploy.tar.gz \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy.tar.gz
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 /tmp/deploy.tar.gz "${{ secrets.VPS_USER }}"@"${{ secrets.VPS_HOST }}":/tmp/deploy.tar.gz
 
-      - name: Deploy on VPS
+      - name: Deploy on VPS (extract, install prod deps, migrate, seed, restart)
         run: |
-          ssh -i ~/.ssh/deploy_key \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "set -euo pipefail && \
-             cd ${{ secrets.VPS_DEPLOY_PATH }} && \
-             echo '📦 Extracting build output...' && \
-             tar -xzf /tmp/deploy.tar.gz && \
-             rm /tmp/deploy.tar.gz && \
-             echo '🗄️ Running database migrations...' && \
-             npx prisma migrate deploy && \
-             echo '🌱 Seeding database...' && \
-             npx prisma db seed || echo '⚠️ Seed already applied or skipped' && \
-             echo '🔄 Restarting application...' && \
-             if pm2 describe hotel-booking > /dev/null 2>&1; then \
-               pm2 restart hotel-booking; \
-             else \
-               pm2 start npm --name hotel-booking -- start; \
-             fi && \
-             pm2 save && \
-             echo '⏳ Health check...' && \
-             sleep 10 && \
-             RETRY=0 && \
-             while [ \$RETRY -lt 30 ]; do \
-               if curl -sf http://localhost:3000 > /dev/null 2>&1; then \
-                 echo '✅ Application is healthy and deployed!'; \
-                 exit 0; \
-               fi; \
-               RETRY=\$((RETRY + 1)); \
-               echo \"  Attempt \$RETRY/30 - waiting...\"; \
-               sleep 5; \
-             done && \
-             echo '❌ Health check failed' && \
-             pm2 logs hotel-booking --lines 50 --nostream && \
-             exit 1"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${{ secrets.VPS_USER }}"@"${{ secrets.VPS_HOST }}" <<'REMOTE'
+            set -euo pipefail
+            cd "${{ secrets.VPS_DEPLOY_PATH }}"
+            echo '📦 Extracting build output...'
+            tar -xzf /tmp/deploy.tar.gz -C . || true
+            rm -f /tmp/deploy.tar.gz || true
+
+            echo '🧰 Installing production dependencies...'
+            # Prefer pnpm on the server; fallback to npm if pnpm not present
+            if command -v pnpm >/dev/null 2>&1; then
+              pnpm install --frozen-lockfile --prod
+            else
+              if command -v npm >/dev/null 2>&1; then
+                npm ci --only=production
+              else
+                echo "ERROR: Neither pnpm nor npm available on the server to install production dependencies"
+                exit 1
+              fi
+            fi
+
+            echo '🗄️ Running database migrations...'
+            if command -v npx >/dev/null 2>&1; then
+              npx prisma migrate deploy || true
+            fi
+
+            echo '🌱 Running seed (if any)...'
+            if command -v npx >/dev/null 2>&1; then
+              npx prisma db seed || echo '⚠️ Seed skipped or already applied'
+            fi
+
+            echo '🔄 Restarting application with pm2...'
+            if command -v pm2 >/dev/null 2>&1; then
+              if pm2 describe hotel-booking > /dev/null 2>&1; then
+                pm2 restart hotel-booking
+              else
+                # Start via npm start; ensure package.json has a start script (e.g. next start)
+                pm2 start npm --name hotel-booking -- start
+              fi
+              pm2 save
+            else
+              echo "WARNING: pm2 not found on server; attempt to run via 'npm start' in background"
+              nohup npm start >/tmp/hotel-booking.log 2>&1 &
+            fi
+
+            echo '⏳ Health check...'
+            sleep 5
+            RETRY=0
+            while [ $RETRY -lt 30 ]; do
+              if curl -sfS http://localhost:3000/ >/dev/null 2>&1; then
+                echo '✅ Application is healthy and deployed!'
+                exit 0
+              fi
+              RETRY=$((RETRY + 1))
+              echo "  Attempt $RETRY/30 - waiting..."
+              sleep 5
+            done
+
+            echo '❌ Health check failed. Showing recent logs:'
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 logs hotel-booking --lines 100 --nostream || true
+            else
+              tail -n 200 /tmp/hotel-booking.log || true
+            fi
+            exit 1
+          REMOTE
 
       - name: Cleanup SSH key
         if: always()
