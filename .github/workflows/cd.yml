@@ -8,65 +8,64 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  build-and-push:
-    name: Build & Push Docker Image
+  deploy:
+    name: Build & Deploy to VPS
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DATABASE_URL=postgresql://placeholder:placeholder@postgres:5432/db
-
-  deploy-to-vps:
-    name: Deploy to VPS
-    runs-on: ubuntu-latest
-    needs: build-and-push
     environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Lightsail VPS
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma generate
+
+      - name: Build Next.js application
+        run: pnpm build
+
+      - name: Create deployment archive
+        run: |
+          tar -czf /tmp/deploy.tar.gz \
+            .next/ \
+            public/ \
+            prisma/ \
+            package.json \
+            pnpm-lock.yaml \
+            pnpm-workspace.yaml \
+            node_modules/ \
+            next.config.ts \
+            tsconfig.json \
+            postcss.config.mjs \
+            tailwind.config.ts \
+            .env.example \
+            docker-entrypoint.sh \
+            Dockerfile \
+            docker-compose.yml
+
+      - name: Upload deployment archive to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "/tmp/deploy.tar.gz"
+          target: "/tmp/deploy.tar.gz"
+
+      - name: Deploy on VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -78,16 +77,25 @@ jobs:
             DEPLOY_PATH="${{ secrets.VPS_DEPLOY_PATH }}"
             cd "$DEPLOY_PATH"
 
-            # Pull the latest image
-            echo "📥 Pulling latest image..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            # Extract the deployment archive
+            echo "📦 Extracting build output..."
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
 
-            # Stop and recreate the application container
-            echo "🚀 Deploying application..."
-            docker compose pull || true
-            docker compose up -d --force-recreate next-app
+            # Run database migrations
+            echo "🗄️ Running database migrations..."
+            npx prisma migrate deploy
 
-            # Wait for the application to be healthy
+            # Restart the application with pm2
+            echo "🔄 Restarting application..."
+            if pm2 describe hotel-booking > /dev/null 2>&1; then
+              pm2 restart hotel-booking
+            else
+              pm2 start npm --name "hotel-booking" -- start
+            fi
+            pm2 save
+
+            # Health check
             echo "⏳ Waiting for application health check..."
             sleep 10
 
@@ -96,7 +104,7 @@ jobs:
 
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
               if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-                echo "✅ Application is healthy!"
+                echo "✅ Application is healthy and deployed!"
                 exit 0
               fi
 
@@ -105,15 +113,6 @@ jobs:
               sleep 5
             done
 
-            echo "❌ Application health check failed after $MAX_RETRIES attempts"
-            docker compose logs --tail=50 next-app
+            echo "❌ Health check failed after $MAX_RETRIES attempts"
+            pm2 logs hotel-booking --lines 50 --nostream
             exit 1
-
-      - name: Notify deployment status
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "🎉 Deployment to VPS completed successfully!"
-          else
-            echo "❌ Deployment to VPS failed!"
-          fi

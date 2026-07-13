@@ -7,6 +7,8 @@ RUN npm install -g pnpm
 # 2. Dependencies image
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
 RUN pnpm install --frozen-lockfile
 
 # 3. Build image

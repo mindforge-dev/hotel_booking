@@ -427,8 +427,7 @@ The project uses **GitHub Actions** for continuous integration and continuous de
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | Push to `main`/`develop`, Pull Requests | Lint, type-check, build, CDK validation |
-| `cd.yml` | Push to `main` | Build Docker image, push to GHCR, deploy to VPS |
-| `docker-pr.yml` | Pull Requests (code changes only) | Verify Docker build succeeds |
+| `cd.yml` | Push to `main` | Sync code to VPS, install deps, build & restart |
 
 ### CI Pipeline (`ci.yml`)
 
@@ -447,21 +446,19 @@ Runs only on pushes to `main` after the CI pipeline succeeds.
 
 **Stages:**
 
-1. **Build & Push Docker Image**
-   - Builds the multi-stage Docker image using Docker Buildx
-   - Pushes to GitHub Container Registry (`ghcr.io`)
-   - Tags: `latest` + commit SHA
-   - Uses GitHub Actions cache for layer caching (faster builds)
+1. **Build in CI**
+   - Installs dependencies and runs `next build` in the GitHub Actions runner
 
-2. **Deploy to VPS (Lightsail)**
+2. **Sync to VPS (rsync)**
+   - Syncs the project files to the Lightsail VPS via rsync (excluding `.env` and `node_modules`)
+
+3. **Build & Restart on VPS**
    - SSHs into the VPS
-   - Pulls the latest image from GHCR
-   - Recreates the application container via `docker compose up -d --force-recreate`
+   - Installs dependencies (`pnpm install --frozen-lockfile`)
+   - Runs database migrations (`prisma migrate deploy`)
+   - Builds the application (`pnpm build`)
+   - Restarts the app via pm2
    - Performs health check (up to 30 retries at 5s intervals on port 3000)
-
-### Docker PR Verification (`docker-pr.yml`)
-
-Runs on pull requests when relevant files change (code, configs, Dockerfile, etc.) to verify the Docker image builds successfully without pushing.
 
 ### Required GitHub Secrets
 
@@ -474,45 +471,15 @@ The following secrets must be configured in **Settings → Secrets and variables
 | `VPS_SSH_KEY` | SSH private key for VPS authentication | CD deployment |
 | `VPS_DEPLOY_PATH` | Path to the project on the VPS (e.g., `/opt/hotel-booking`) | CD deployment |
 
-> **Note:** `GITHUB_TOKEN` is automatically provided by GitHub Actions for authentication with GHCR — no additional secret needed.
-
 ### VPS Setup
 
 Your Lightsail VPS needs the following to support automated deployments:
 
-1. **Docker and Docker Compose** installed
-2. **A `docker-compose.yml`** at `VPS_DEPLOY_PATH` that references the GHCR image:
-   ```yaml
-   version: '3.8'
-   services:
-     next-app:
-       image: ghcr.io/mindforge-dev/hotel_booking:latest
-       ports:
-         - "3000:3000"
-       depends_on:
-         - postgres
-       environment:
-         - DATABASE_URL=${DATABASE_URL}
-         - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-         - NEXTAUTH_URL=${NEXTAUTH_URL}
-         # ... other env vars from .env
-     postgres:
-       image: postgres:15-alpine
-       environment:
-         - POSTGRES_USER=${POSTGRES_USER}
-         - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-         - POSTGRES_DB=${POSTGRES_DB}
-       volumes:
-         - postgres-data:/var/lib/postgresql/data
-   volumes:
-     postgres-data:
-   ```
-3. **A `.env` file** at `VPS_DEPLOY_PATH` with production environment variables
-4. **SSH access** configured with the key pair matching `VPS_SSH_KEY`
-5. **GitHub Packages access** — if the repository is private, the VPS needs a GHCR pull token:
-   ```bash
-   echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u USERNAME --password-stdin
-   ```
+1. **Node.js 20** and **pnpm 9** installed
+2. **PostgreSQL 15** running with the production database
+3. **pm2** installed globally (`npm install -g pm2`) for process management
+4. **A `.env` file** at `VPS_DEPLOY_PATH` with production environment variables (not committed to git, preserved across deploys by rsync exclude)
+5. **SSH access** configured with the key pair matching `VPS_SSH_KEY`
 
 ### Branch Strategy
 
@@ -520,7 +487,7 @@ Your Lightsail VPS needs the following to support automated deployments:
 |--------|-----------|-------------|
 | `main` | ✅ Full CI | ✅ Deploys to VPS |
 | `develop` | ✅ Full CI | ❌ No deploy |
-| Feature branches (PRs) | ✅ Full CI + Docker build check | ❌ No deploy |
+| Feature branches (PRs) | ✅ Full CI | ❌ No deploy |
 
 ## Features
 
