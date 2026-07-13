@@ -4,6 +4,8 @@ CDK v2 (TypeScript) infrastructure for real-time WebSocket notifications.
 
 ## Architecture
 
+![CDK WebSocket Infrastructure](../../infrastructure-composer-WebSocketNotificationStack-dev.yaml.png)
+
 ```
 ┌──────────────────┐        ┌─────────────────────┐        ┌───────────────────┐
 │   Next.js App    │◄──────►│  API Gateway WS API  │◄──────►│  Lambda Handlers   │
@@ -110,9 +112,32 @@ packages/cdk-infra/
 
 ## Integration with Next.js
 
-The refactored `services/awsWebSocket.ts` in the root project sends messages through this CDK-deployed infrastructure:
+The Next.js application integrates with the CDK-deployed WebSocket infrastructure using both server-side dispatching and client-side listener providers.
 
-- **Server-side** (`services/awsWebSocket.ts`): POSTs to the `sendMessage` Lambda route via the API Gateway endpoint
-- **Client-side** (`providers/webSocketProvider.tsx`): Connects directly to the WebSocket API Gateway endpoint with `?userId=<id>`
+No `@aws-sdk` dependencies are needed in the Next.js app — all AWS SDK usage is encapsulated within the Lambda layer.
 
-No `@aws-sdk` dependencies are needed in the Next.js app — all AWS SDK usage is in the Lambda layer.
+### Server-side Notification Dispatching
+* **Service** (`services/awsWebSocket.ts`): POSTs payload messages to the `sendMessage` Lambda route via the API Gateway endpoint when trigger events (e.g. new bookings, updates) occur.
+
+### Client-side WebSocket Connection Handling
+The frontend manages WebSocket connections dynamically using React Context and the native browser `WebSocket` API defined in [webSocketProvider.tsx](file:///home/thz/Desktop/projects/hotel_booking/providers/webSocketProvider.tsx).
+
+#### 1. Lifecycle & Connection Management
+* **Persistent Connection Ref**: The WebSocket instance is stored in a React Ref (`ws = useRef<WebSocket | null>(null)`) to prevent connection resets during component re-renders.
+* **Authentication-driven connection**: The connection is automatically established once a user is authenticated (`session?.user?.id` and `status === "authenticated"`).
+* **Connection parameters**: It appends the user's ID as a query parameter (`?userId=<id>`) to the WebSocket URL for authorization and routing.
+* **Auto-cleanup**: Closes the socket connection and clears any pending reconnection timers when the provider unmounts or the user session changes.
+
+#### 2. Reconnection & Recovery
+* Handles unexpected disconnects in the `onclose` handler.
+* Attempts automatic reconnection up to **5 times** (`MAX_RECONNECT_ATTEMPTS`) with a **3-second delay** (`RECONNECT_DELAY`) for non-clean closures (`!event.wasClean`).
+
+#### 3. Message Processing & UI Updates
+* **React Query Cache Synchronization**: When a `"sendNotification"` action is received, it immediately updates the `notificationsQueryKey` query cache, updating notification badges dynamically without requiring a manual server refetch.
+* **Toast Notification Rate Limiting**: Displays a user-facing toast alert with the message, rate-limited using a **3-second deduplication window** (`TOAST_DEDUP_MS`) to prevent spamming.
+
+#### 4. Outbound Notifications
+* Uses a hybrid, fire-and-forget approach for `sendNotification`:
+  * Saves notifications via REST API helpers (`saveNotificationToAdmins` or `saveNotification`).
+  * Optimistically updates the local React Query cache state.
+  * Wrapped in `try...catch` so notification network issues do not interrupt core booking flows.
