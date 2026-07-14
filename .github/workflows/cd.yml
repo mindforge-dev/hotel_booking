@@ -37,6 +37,9 @@ jobs:
           fi
 
       - name: Install dependencies and build
+        env:
+          NEXT_PUBLIC_WEB_SOCKET_URL: ${{ secrets.NEXT_PUBLIC_WEB_SOCKET_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
         run: |
           pnpm install --frozen-lockfile
           pnpm prisma generate || true
@@ -100,18 +103,16 @@ jobs:
             npx prisma db seed || echo "⚠️ Seed skipped or already applied"
 
             echo "🔄 Restarting application..."
-            if pm2 describe hotel-booking > /dev/null 2>&1; then
-              pm2 restart hotel-booking
-            else
-              pm2 start npm --name hotel-booking -- start
-            fi
+            pm2 stop hotel-booking 2>/dev/null || true
+            pm2 delete hotel-booking 2>/dev/null || true
+            pm2 start npm --name hotel-booking -- start
             pm2 save
 
             echo "⏳ Health check..."
             sleep 10
             RETRY=0
             while [ $RETRY -lt 30 ]; do
-              if curl -sfS http://localhost:3000/ >/dev/null 2>&1; then
+              if curl -sfS http://localhost:81/ >/dev/null 2>&1; then
                 echo "✅ Application is healthy and deployed!"
                 exit 0
               fi

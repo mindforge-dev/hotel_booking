@@ -176,7 +176,9 @@ export class AWSWebSocketService {
       userIds.map(async (userId) => {
         try {
           const connectionIds = await this.getUserConnections(userId);
+          console.log(`[AWSWebSocket] User ${userId} has ${connectionIds.length} active connections`);
           if (connectionIds.length === 0) {
+            console.log(`[AWSWebSocket] No WebSocket connection found for user ${userId} — is the client connected?`);
             return { userId, sent: false, reason: "no_connection" };
           }
 
