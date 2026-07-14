@@ -39,7 +39,13 @@ jobs:
       - name: Install dependencies and build
         env:
           NEXT_PUBLIC_WEB_SOCKET_URL: ${{ secrets.NEXT_PUBLIC_WEB_SOCKET_URL }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'build-time-placeholder-not-for-production' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://placeholder:placeholder@localhost:5432/db' }}
+          WEBSOCKET_API_URL: ${{ secrets.WEBSOCKET_API_URL || 'https://placeholder.execute-api.ap-southeast-1.amazonaws.com/dev' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'placeholder' }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'placeholder' }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
         run: |
           pnpm install --frozen-lockfile
           pnpm prisma generate || true
