@@ -35,21 +35,22 @@ function getDocClient(): DynamoDBDocumentClient {
   return docClient;
 }
 
-function getManagementApiClient(apiId: string): ApiGatewayManagementApiClient {
-  if (!managementApiClients.has(apiId)) {
+function getManagementApiClient(apiEndpoint: string): ApiGatewayManagementApiClient {
+  if (!managementApiClients.has(apiEndpoint)) {
     managementApiClients.set(
-      apiId,
+      apiEndpoint,
       new ApiGatewayManagementApiClient({
-        endpoint: `https://${apiId}.execute-api.${REGION}.amazonaws.com/dev`,
+        endpoint: apiEndpoint,
         region: REGION,
       })
     );
   }
-  return managementApiClients.get(apiId)!;
+  return managementApiClients.get(apiEndpoint)!;
 }
 
 export class AWSWebSocketService {
   private apiId: string;
+  private apiEndpoint: string;
   private tableName: string;
   private userIdIndex: string;
 
@@ -58,6 +59,7 @@ export class AWSWebSocketService {
     // Extract API ID from URL: https://{apiId}.execute-api.{region}.amazonaws.com/{stage}
     const match = apiUrl.match(/https:\/\/([^.]+)\.execute-api\./);
     this.apiId = match ? match[1] : "";
+    this.apiEndpoint = apiUrl.replace(/\/@connections$/, "").replace(/\/$/, "");
     this.tableName = process.env.CONNECTIONS_TABLE_NAME || "WebSocketConnections-dev";
     this.userIdIndex = process.env.USER_ID_INDEX_NAME || "UserIdIndex";
 
@@ -92,7 +94,7 @@ export class AWSWebSocketService {
     message: WebSocketMessage
   ): Promise<boolean> {
     try {
-      const client = getManagementApiClient(this.apiId);
+      const client = getManagementApiClient(this.apiEndpoint);
       await client.send(
         new PostToConnectionCommand({
           ConnectionId: connectionId,
@@ -115,8 +117,8 @@ export class AWSWebSocketService {
    * Send a WebSocket message to a specific user.
    */
   async sendMessageToUser(userId: string, message: WebSocketMessage): Promise<boolean> {
-    if (!this.apiId) {
-      console.log("[AWSWebSocket] No API ID configured, message logged:", message.message);
+    if (!this.apiEndpoint) {
+      console.log("[AWSWebSocket] No API endpoint configured, message logged:", message.message);
       return false;
     }
 
@@ -148,8 +150,8 @@ export class AWSWebSocketService {
   ): Promise<{ success: number; failed: number }> {
     if (userIds.length === 0) return { success: 0, failed: 0 };
 
-    if (!this.apiId) {
-      console.log("[AWSWebSocket] No API ID configured, batch message logged for", userIds.length, "users");
+    if (!this.apiEndpoint) {
+      console.log("[AWSWebSocket] No API endpoint configured, batch message logged for", userIds.length, "users");
       return { success: 0, failed: userIds.length };
     }
 
