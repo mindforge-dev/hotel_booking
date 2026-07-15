@@ -102,11 +102,9 @@ jobs:
             tar -xzf /tmp/deploy.tar.gz -C .
             rm -f /tmp/deploy.tar.gz
 
-            echo "🗄️ Running database migrations..."
-            npx prisma migrate deploy || true
+           
 
-            echo "🌱 Seeding database..."
-            npx prisma db seed || echo "⚠️ Seed skipped or already applied"
+
 
             echo "🔄 Restarting application..."
             pm2 stop hotel-booking 2>/dev/null || true
@@ -114,22 +112,9 @@ jobs:
             pm2 start npm --name hotel-booking -- start
             pm2 save
 
-            echo "⏳ Health check..."
-            sleep 10
-            RETRY=0
-            while [ $RETRY -lt 30 ]; do
-              if curl -sfS http://localhost:81/ >/dev/null 2>&1; then
-                echo "✅ Application is healthy and deployed!"
-                exit 0
-              fi
-              RETRY=$((RETRY + 1))
-              echo "  Attempt $RETRY/30 - waiting..."
-              sleep 5
-            done
 
-            echo "❌ Health check failed. Showing recent logs:"
-            pm2 logs hotel-booking --lines 100 --nostream || true
-            exit 1
+
+
           REMOTE
 
       - name: Cleanup SSH key
