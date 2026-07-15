@@ -122,6 +122,10 @@ model Room {
   name      String
   bookings  BookingRoom[]
   hotel     Hotel         @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([price])
+  @@index([createdAt])
 }
 
 model BookingRoom {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,29 +27,40 @@ export function RoomsFilter({ onFilterChange, isLoading }: RoomsFilterProps) {
 
   const { data: hotels = [] } = useHotelsForFilter();
 
-  console.log(hotels)
+  // Debounce: only fire onFilterChange after 300ms of inactivity
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handleFilterChange = (key: string, value: string) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
 
-    const apiFilters = {
-      ...newFilters,
-      minPrice: newFilters.minPrice ? parseFloat(newFilters.minPrice) : undefined,
-      maxPrice: newFilters.maxPrice ? parseFloat(newFilters.maxPrice) : undefined,
-      available: newFilters.available ? parseInt(newFilters.available) : undefined,
-      hotelId: newFilters.hotelId || undefined,
-      name: newFilters.name || undefined,
-    };
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    // Remove undefined values
-    Object.keys(apiFilters).forEach(key => {
-      if (apiFilters[key as keyof typeof apiFilters] === undefined) {
-        delete apiFilters[key as keyof typeof apiFilters];
-      }
-    });
+    debounceRef.current = setTimeout(() => {
+      const apiFilters = {
+        ...newFilters,
+        minPrice: newFilters.minPrice ? parseFloat(newFilters.minPrice) : undefined,
+        maxPrice: newFilters.maxPrice ? parseFloat(newFilters.maxPrice) : undefined,
+        available: newFilters.available ? parseInt(newFilters.available) : undefined,
+        hotelId: newFilters.hotelId || undefined,
+        name: newFilters.name || undefined,
+      };
 
-    onFilterChange(apiFilters);
+      // Remove undefined values
+      Object.keys(apiFilters).forEach((key) => {
+        if (apiFilters[key as keyof typeof apiFilters] === undefined) {
+          delete apiFilters[key as keyof typeof apiFilters];
+        }
+      });
+
+      onFilterChange(apiFilters);
+    }, 300);
   };
 
   const clearFilters = () => {
@@ -61,10 +72,11 @@ export function RoomsFilter({ onFilterChange, isLoading }: RoomsFilterProps) {
       available: "",
     };
     setFilters(emptyFilters);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     onFilterChange({});
   };
 
-  const hasActiveFilters = Object.values(filters).some(value => value !== "");
+  const hasActiveFilters = Object.values(filters).some((value) => value !== "");
 
   return (
     <Card className="mb-6">
@@ -112,7 +124,6 @@ export function RoomsFilter({ onFilterChange, isLoading }: RoomsFilterProps) {
               </SelectContent>
             </Select>
           </div>
-
 
           <div className="space-y-2">
             <Label htmlFor="minPrice">Min Price</Label>
@@ -175,7 +186,7 @@ export function RoomsFilter({ onFilterChange, isLoading }: RoomsFilterProps) {
               {filters.name && <span className="bg-primary/10 px-2 py-1 rounded">Name: {filters.name}</span>}
               {filters.hotelId && (
                 <span className="bg-primary/10 px-2 py-1 rounded">
-                  Hotel: {hotels.find((h: any) => h.id === filters.hotelId)?.name || 'Selected'}
+                  Hotel: {hotels.find((h: any) => h.id === filters.hotelId)?.name || "Selected"}
                 </span>
               )}
               {filters.minPrice && <span className="bg-primary/10 px-2 py-1 rounded">Min: ${filters.minPrice}</span>}

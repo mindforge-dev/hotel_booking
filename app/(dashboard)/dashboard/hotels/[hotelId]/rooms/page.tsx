@@ -27,7 +27,6 @@ export default function Page() {
         enabled: !!hotelId,
     });
 
-    console.log(data)
     if (isLoading) return <div>Loading...</div>
     if (error) return <div>Error loading rooms.</div>
 

@@ -54,7 +54,7 @@ export function DataTable<TData extends RowWithId, TValue>({
     getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
-    getFilteredRowModel: getFilteredRowModel(),
+    getFilteredRowModel: pagination ? undefined : getFilteredRowModel(),
     enableRowSelection: true,
     manualPagination: !!pagination,
     state: {

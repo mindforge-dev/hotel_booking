@@ -49,8 +49,8 @@ export async function GET(request: Request) {
       };
     }
 
-    // Get rooms with pagination and filtering
-    const [rooms, totalCount] = await Promise.all([
+    // Get rooms with pagination, filtering, and aggregate stats
+    const [rooms, totalCount, bookingStats, roomStats] = await Promise.all([
       prisma.room.findMany({
         where,
         include: {
@@ -74,6 +74,15 @@ export async function GET(request: Request) {
         take: limit,
       }),
       prisma.room.count({ where }),
+      prisma.bookingRoom.aggregate({
+        _count: true,
+      }),
+      prisma.room.aggregate({
+        _sum: {
+          available: true,
+          price: true,
+        },
+      }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -81,6 +90,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       rooms,
+      stats: {
+        _sum: {
+          available: roomStats._sum.available,
+          price: roomStats._sum.price,
+        },
+        _count: bookingStats._count,
+      },
       pagination: {
         page,
         limit,

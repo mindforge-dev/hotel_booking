@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { columns } from "./columns";
+import { useState, useMemo } from "react";
+import { createColumns } from "./columns";
 import { DataTable } from "@/components/dataTable/data-table";
 import { RoomsFilter } from "@/components/dashboard/RoomsFilter";
 import { useRooms, useBatchDeleteRooms } from "@/hooks/dashboard/useRooms";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useBatchDelete } from "@/hooks/dashboard/useBatchDelete";
 import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
 export default function RoomsPage() {
-
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -24,9 +24,25 @@ export default function RoomsPage() {
     useBatchDelete({
       mutationFn: roomDeleteMutation.mutateAsync,
       getSuccessMessage: (result: any) =>
-        `Successfully deleted ${result.deletedCount} booking(s)`,
+        `Successfully deleted ${result.deletedCount} room(s)`,
     });
 
+  const queryClient = useQueryClient();
+
+  const deleteSingleRoom = useMutation({
+    mutationFn: async (id: string) => {
+      await axios.delete("/api/dashboard/rooms", { data: { ids: [id] } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "rooms"] });
+    },
+  });
+
+  // Memoize columns so they don't re-create on every render
+  const columns = useMemo(
+    () => createColumns((id) => deleteSingleRoom.mutate(id)),
+    [deleteSingleRoom]
+  );
 
   const handleFilterChange = (newFilters: any) => {
     setFilters({
@@ -51,9 +67,6 @@ export default function RoomsPage() {
     });
   };
 
-
-
-
   if (error) {
     return (
       <div className="p-6">
@@ -71,6 +84,8 @@ export default function RoomsPage() {
       </div>
     );
   }
+
+  const stats = data?.stats;
 
   return (
     <div className="p-6">
@@ -105,25 +120,24 @@ export default function RoomsPage() {
           </div>
           <div className="bg-card p-4 rounded-lg border">
             <div className="text-2xl font-bold text-green-600">
-              {data.rooms?.reduce((sum: number, room: any) => sum + room.available, 0) || 0}
+              {stats?._sum?.available ?? data.pagination.totalCount}
             </div>
             <div className="text-sm text-muted-foreground">Available Rooms</div>
           </div>
           <div className="bg-card p-4 rounded-lg border">
             <div className="text-2xl font-bold text-blue-600">
-              {data.rooms?.reduce((sum: number, room: any) => sum + room._count.bookings, 0) || 0}
+              {stats?._count ?? 0}
             </div>
             <div className="text-sm text-muted-foreground">Total Bookings</div>
           </div>
           <div className="bg-card p-4 rounded-lg border">
             <div className="text-2xl font-bold text-purple-600">
-              ${data.rooms?.reduce((sum: number, room: any) => sum + room.price, 0)?.toFixed(2) || '0.00'}
+              ${stats?._sum?.price?.toFixed(2) ?? "0.00"}
             </div>
             <div className="text-sm text-muted-foreground">Total Value/Night</div>
           </div>
         </div>
       )}
-
 
       <DataTable
         isLoading={isLoading}
