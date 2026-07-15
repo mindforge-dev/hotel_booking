@@ -80,7 +80,7 @@ const AvailabilityCell = React.memo(
     const isLow = percentage < 30;
 
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 w-24">
         <div className="flex items-center gap-2">
           <span className="text-sm">
             {available}/{total}
@@ -92,12 +92,12 @@ const AvailabilityCell = React.memo(
             {percentage.toFixed(0)}%
           </Badge>
         </div>
-        <div className="w-full bg-muted rounded-full h-1.5">
+        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
           <div
-            className={`h-1.5 rounded-full ${
+            className={`h-1.5 rounded-full transition-all ${
               isLow ? "bg-red-500" : "bg-green-500"
             }`}
-            style={{ width: `${percentage}%` }}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
       </div>

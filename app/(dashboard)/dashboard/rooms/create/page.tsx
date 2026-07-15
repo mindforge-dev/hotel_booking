@@ -2,6 +2,7 @@ import { createRoom, getHotels } from "./createRoom";
 import { amenitiesList } from "@/data/aminities";
 import Form from "next/form";
 import ImageUploadClient from "./ImageUploadClient";
+import { SubmitButton } from "./SubmitButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,7 @@ export default async function CreateRoomPage() {
                                 name="name"
                                 placeholder="e.g. Deluxe Ocean View"
                                 className="w-full bg-background border border-border rounded-md p-3"
+                                required
                             />
                         </div>
 
@@ -69,6 +71,7 @@ export default async function CreateRoomPage() {
                                     type="number"
                                     name="price"
                                     min="0"
+                                    step="0.01"
                                     placeholder="0.00"
                                     className="w-full bg-background border border-border rounded-md p-3"
                                     required
@@ -136,12 +139,7 @@ export default async function CreateRoomPage() {
 
                 {/* Submit */}
                 <div className="flex items-center gap-3 pt-4 border-t">
-                    <button
-                        type="submit"
-                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-md font-medium text-white transition-colors"
-                    >
-                        Create Room
-                    </button>
+                    <SubmitButton />
                 </div>
             </Form>
         </div>

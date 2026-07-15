@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { RoomSchema } from "@/schemas/room.schema";
 import { uploadToCloudinary } from "@/lib/imageUpload/cloudinaryImageUpload";
 
@@ -27,28 +28,21 @@ export async function createRoomForHotel(formData: FormData) {
 
     const data = parsed.data;
 
-    let mainImageUrl = '';
-    if (mainImageFile && mainImageFile.size > 0) {
-        try {
-            mainImageUrl = await uploadToCloudinary(mainImageFile);
-        } catch (error) {
-            return { error: { mainImage: ['Failed to upload main image'] } };
-        }
-    } else {
-        return { error: { mainImage: ['Main image is required'] } };
+    if (!mainImageFile || mainImageFile.size === 0) {
+        return { error: { mainImage: ["Main image is required"] } };
     }
 
-    const subImageUrls: string[] = [];
-    for (const file of subImageFiles) {
-        if (file && file.size > 0) {
-            try {
-                const url = await uploadToCloudinary(file);
-                subImageUrls.push(url);
-            } catch (error) {
-                console.error('Failed to upload sub image:', error);
-            }
-        }
-    }
+    // Upload main image + all sub images in parallel
+    const validSubFiles = subImageFiles.filter((f) => f && f.size > 0);
+
+    const [mainImageUrl, subImageResults] = await Promise.all([
+        uploadToCloudinary(mainImageFile),
+        Promise.allSettled(validSubFiles.map((file) => uploadToCloudinary(file))),
+    ]);
+
+    const subImageUrls = subImageResults
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<string>).value);
 
     const room = await prisma.room.create({
         data: {
@@ -64,5 +58,6 @@ export async function createRoomForHotel(formData: FormData) {
         },
     });
 
+    revalidatePath(`/dashboard/hotels/${data.hotelId}/rooms`);
     redirect(`/dashboard/hotels/${data.hotelId}/rooms`);
 }

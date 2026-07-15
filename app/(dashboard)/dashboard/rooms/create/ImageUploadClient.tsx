@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
+
+interface SubImage {
+    file: File;
+    preview: string;
+}
 
 export default function ImageUploadClient() {
     const [mainPreview, setMainPreview] = useState<string | null>(null);
-    const [subPreviews, setSubPreviews] = useState<string[]>([]);
-
+    const [subImages, setSubImages] = useState<SubImage[]>([]);
     const mainInputRef = useRef<HTMLInputElement | null>(null);
+    const subInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-   
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -22,34 +26,52 @@ export default function ImageUploadClient() {
 
     const handleSubImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        const remainingSlots = 5 - subPreviews.length;
+        const remainingSlots = 5 - subImages.length;
         const filesToAdd = files.slice(0, remainingSlots);
+
+        const newSubs: SubImage[] = [];
+        let pending = filesToAdd.length;
+
+        if (pending === 0) return;
 
         filesToAdd.forEach((file) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setSubPreviews((prev) => [...prev, reader.result as string]);
+                newSubs.push({ file, preview: reader.result as string });
+                pending--;
+                if (pending === 0) {
+                    setSubImages((prev) => [...prev, ...newSubs]);
+                }
             };
             reader.readAsDataURL(file);
         });
+
+        // Reset input so the same file can be re-selected
+        e.target.value = '';
     };
 
     const removeMainImage = () => {
         setMainPreview(null);
-        // Clear the actual file input so the file isn't submitted
         if (mainInputRef.current) {
             mainInputRef.current.value = '';
-        } else {
-            const input = document.querySelector('input[name="mainImage"]') as HTMLInputElement;
-            if (input) input.value = '';
         }
     };
 
     const removeSubImage = (index: number) => {
-        setSubPreviews(subPreviews.filter((_, i) => i !== index));
-        const input = document.querySelector('input[name="subImages"]') as HTMLInputElement;
-        if (input) input.value = '';
+        setSubImages((prev) => prev.filter((_, i) => i !== index));
     };
+
+    // Sync File objects into the hidden input so they're included in FormData
+    useLayoutEffect(() => {
+        if (!subInputRef.current) return;
+        try {
+            const dt = new DataTransfer();
+            subImages.forEach((sub) => dt.items.add(sub.file));
+            subInputRef.current.files = dt.files;
+        } catch {
+            // DataTransfer not supported — files won't be sent
+        }
+    }, [subImages]);
 
     return (
         <div className="space-y-6">
@@ -73,7 +95,6 @@ export default function ImageUploadClient() {
                             </p>
                             <p className="text-xs text-muted-foreground">PNG, JPG, WEBP (MAX. 5MB)</p>
                         </div>
-                        {/* Input is now rendered outside the conditional to ensure it's always present in the DOM */}
                     </label>
                 ) : (
                     <div className="relative">
@@ -82,7 +103,6 @@ export default function ImageUploadClient() {
                             alt="Main preview"
                             className="w-full h-48 object-cover rounded-md"
                         />
-                        {/* small edit button to change main image if preview is showing */}
                         <button
                             type="button"
                             onClick={() => mainInputRef.current?.click()}
@@ -101,7 +121,6 @@ export default function ImageUploadClient() {
                         </button>
                     </div>
                 )}
-                {/* Always-mounted hidden input so the File is present when the form is submitted */}
                 <input
                     id="mainImageInput"
                     ref={mainInputRef}
@@ -110,7 +129,6 @@ export default function ImageUploadClient() {
                     className="hidden"
                     accept="image/*"
                     onChange={handleMainImageChange}
-                    required
                 />
             </div>
 
@@ -120,15 +138,15 @@ export default function ImageUploadClient() {
                     Additional Images
                 </label>
                 <p className="text-sm text-muted-foreground mb-2">
-                    Add up to 5 additional images ({subPreviews.length}/5)
+                    Add up to 5 additional images ({subImages.length}/5)
                 </p>
 
-                {subPreviews.length > 0 && (
+                {subImages.length > 0 && (
                     <div className="grid grid-cols-3 gap-3 mb-3">
-                        {subPreviews.map((preview, index) => (
+                        {subImages.map((sub, index) => (
                             <div key={index} className="relative">
                                 <img
-                                    src={preview}
+                                    src={sub.preview}
                                     alt={`Preview ${index + 1}`}
                                     className="w-full h-24 object-cover rounded-md"
                                 />
@@ -146,7 +164,7 @@ export default function ImageUploadClient() {
                     </div>
                 )}
 
-                {subPreviews.length < 5 && (
+                {subImages.length < 5 && (
                     <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-md cursor-pointer hover:bg-accent transition-colors">
                         <div className="flex flex-col items-center justify-center">
                             <svg className="w-8 h-8 mb-2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +176,6 @@ export default function ImageUploadClient() {
                         </div>
                         <input
                             type="file"
-                            name="subImages"
                             className="hidden"
                             accept="image/*"
                             multiple
@@ -166,6 +183,16 @@ export default function ImageUploadClient() {
                         />
                     </label>
                 )}
+
+                {/* Hidden input synced with File objects for form submission */}
+                <input
+                    ref={subInputRef}
+                    type="file"
+                    name="subImages"
+                    className="hidden"
+                    multiple
+                    accept="image/*"
+                />
             </div>
         </div>
     );
