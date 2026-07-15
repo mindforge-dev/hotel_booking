@@ -6,13 +6,17 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { amenitiesList } from "@/data/aminities";
 import { Room } from "@/types/rooms";
+import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function EditRoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string>("");
   const [currentSubImages, setCurrentSubImages] = useState<string[]>([]);
@@ -75,6 +79,7 @@ export default function EditRoomPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploading(true);
     const fd = new FormData();
     fd.append("file", file);
 
@@ -83,7 +88,9 @@ export default function EditRoomPage() {
       setFormData((prev) => ({ ...prev, image: data.url }));
       setCurrentImage(data.url);
     } catch {
-      alert("Failed to upload image");
+      setError("Failed to upload image");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -91,7 +98,9 @@ export default function EditRoomPage() {
     const files = e.target.files;
     if (!files) return;
 
+    setUploading(true);
     const newUrls: string[] = [];
+
     for (const file of Array.from(files)) {
       const fd = new FormData();
       fd.append("file", file);
@@ -106,6 +115,7 @@ export default function EditRoomPage() {
     const updated = [...formData.subImage, ...newUrls].slice(0, 5);
     setFormData((prev) => ({ ...prev, subImage: updated }));
     setCurrentSubImages(updated);
+    setUploading(false);
   };
 
   const removeSubImage = (index: number) => {
@@ -130,9 +140,10 @@ export default function EditRoomPage() {
         subImage: formData.subImage,
       });
 
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "rooms"] });
       router.push("/dashboard/rooms");
     } catch {
-      alert("Failed to save room changes.");
+      setError("Failed to save room changes.");
     } finally {
       setSaving(false);
     }
@@ -285,13 +296,16 @@ export default function EditRoomPage() {
           </div>
 
           <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md font-medium text-white"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            <Button type="submit" disabled={saving || uploading} className="px-6 py-2">
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
             <a
               href="/dashboard/rooms"
               className="px-6 py-2 border border-border rounded-md font-medium hover:bg-accent"

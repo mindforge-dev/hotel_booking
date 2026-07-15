@@ -19,26 +19,12 @@ export async function GET(
       where: { id: roomId },
       include: {
         hotel: {
-          include: {
-            city: {
-              include: {
-                country: true
-              }
-            }
-          }
+          select: {
+            id: true,
+            name: true,
+          },
         },
-        bookings: {
-          where: session.user.role === "ADMIN" ? {} : {
-            userId: session.user.id
-          },
-          include: {
-            user: session.user.role === "ADMIN" ? true : false
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
+      },
     });
 
     if (!room) {
@@ -50,6 +36,51 @@ export async function GET(
     console.error("Error fetching room details:", error);
     return NextResponse.json(
       { error: "Failed to fetch room details" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { roomId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { roomId } = await params;
+    const body = await request.json();
+
+    const { name, roomType, price, total, available, amenities, image, subImage } = body;
+
+    // Verify room exists
+    const existing = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+    }
+
+    const room = await prisma.room.update({
+      where: { id: roomId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(roomType !== undefined && { roomType }),
+        ...(price !== undefined && { price }),
+        ...(total !== undefined && { total }),
+        ...(available !== undefined && { available }),
+        ...(amenities !== undefined && { amenities }),
+        ...(image !== undefined && { image }),
+        ...(subImage !== undefined && { subImage }),
+      },
+    });
+
+    return NextResponse.json({ success: true, room });
+  } catch (error) {
+    console.error("Error updating room:", error);
+    return NextResponse.json(
+      { error: "Failed to update room" },
       { status: 500 }
     );
   }
