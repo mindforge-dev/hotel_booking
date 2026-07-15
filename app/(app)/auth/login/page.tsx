@@ -1,24 +1,26 @@
-"use client"
+"use client";
 
-import { signIn } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     signIn("credentials", {
       email: formData.email,
       password: formData.password,
       callbackUrl: "/", // middleware handles role-based redirect
-    })
-  }
+    });
+  };
 
   return (
     <div className="container mx-auto flex h-screen items-center justify-center">
@@ -40,7 +42,9 @@ export default function SignIn() {
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
               />
             </div>
@@ -52,7 +56,9 @@ export default function SignIn() {
                 id="password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
               />
             </div>
@@ -81,13 +87,15 @@ export default function SignIn() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => signIn("google", { callbackUrl: "/" })}
+              onClick={() => {
+                router.push("/auth/register");
+              }}
             >
-              Continue with Google
+              Register
             </Button>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

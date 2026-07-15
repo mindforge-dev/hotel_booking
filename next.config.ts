@@ -7,6 +7,20 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Trust the reverse proxy (nginx/caddy on port 81 → Next.js on port 3000)
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Forwarded-Proto",
+            value: "https",
+          },
+        ],
+      },
+    ];
+  },
   // Increase Server Actions body size limit so image uploads via server action work
   experimental: {
     serverActions: {
