@@ -120,8 +120,8 @@ export default function Navbar() {
                 <UserCircle2 className="w-6 h-6" />
               </Button>
 
-              <AnimatePresence>
-                {profileOpen && (
+                  <AnimatePresence>
+                  {profileOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -129,7 +129,7 @@ export default function Navbar() {
                     className="absolute right-0 mt-2 w-48 bg-popover text-popover-foreground border rounded-md shadow-md z-50"
                   >
                     <Link
-                      href="/dashboard"
+                      href={session?.user?.role === "ADMIN" ? "/dashboard" : "/user/dashboard"}
                       className="block px-4 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={() => setProfileOpen(false)}
                     >
@@ -144,7 +144,7 @@ export default function Navbar() {
                     </Link>
                     <button
                       onClick={() => {
-                        signOut()
+                        signOut({ callbackUrl: "/" })
                         setProfileOpen(false)
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
@@ -209,7 +209,7 @@ export default function Navbar() {
                   <>
                     <Link
                       key="dashboard-link"
-                      href="/dashboard"
+                      href={session?.user?.role === "ADMIN" ? "/dashboard" : "/user/dashboard"}
                       onClick={() => setIsOpen(false)}
                       className="text-foreground/70 hover:text-foreground transition-colors"
                     >
@@ -220,7 +220,7 @@ export default function Navbar() {
                       variant="ghost"
                       className="text-left px-0 text-destructive"
                       onClick={() => {
-                        signOut()
+                        signOut({ callbackUrl: "/" })
                         setIsOpen(false)
                       }}
                     >

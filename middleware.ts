@@ -7,11 +7,6 @@ export default withAuth(
     const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
 
-    // Redirect admin from root to /dashboard
-    if (pathname === "/" && token?.role === "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-
     // Protect /api/dashboard routes — admins only (notifications endpoint is public-safe, reads by userId)
     if (pathname.startsWith("/api/dashboard") && pathname !== "/api/dashboard/notifications") {
       if (token?.role !== "ADMIN") {
@@ -47,7 +42,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/",
     "/dashboard/:path*",
     "/user/:path*",
     "/api/dashboard/:path*",

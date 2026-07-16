@@ -37,8 +37,8 @@ export default function SignUpPage() {
       });
 
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error);
+        const data = await res.json().catch(() => ({ error: "Registration failed." }));
+        throw new Error(data.error || "Registration failed. Please try again.");
       }
 
       // Auto sign in after successful registration

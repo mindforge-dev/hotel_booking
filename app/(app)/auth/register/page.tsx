@@ -31,7 +31,8 @@ export default function RegisterPage() {
       });
 
       if (!res.ok) {
-        throw new Error(await res.text());
+        const data = await res.json().catch(() => ({ error: "Registration failed." }));
+        throw new Error(data.error || "Registration failed. Please try again.");
       }
 
       router.push("/auth/login");

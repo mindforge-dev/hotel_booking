@@ -17,46 +17,55 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email
+            }
+          });
+
+          if (!user || !user.password) {
+            throw new Error("User not found");
           }
-        });
 
-        if (!user || !user.password) {
-          throw new Error("User not found");
+          const passwordMatch = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!passwordMatch) {
+            throw new Error("Invalid password");
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          // Re-throw known auth errors, wrap unexpected errors
+          if (
+            error instanceof Error &&
+            ["Invalid credentials", "User not found", "Invalid password"].includes(error.message)
+          ) {
+            throw error;
+          }
+          console.error("[Auth] Unexpected error during authorization:", error);
+          throw new Error("Authorization failed. Please try again.");
         }
-
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!passwordMatch) {
-          throw new Error("Invalid password");
-        }
-
-  
-        return {
-          id: user.id,  // This is crucial
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
-     
       if (user) {
         token.id = user.id;
-        token.role = user.role; 
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-  
       if (session.user) {
         // @ts-ignore
         session.user.id = token.id as string;
