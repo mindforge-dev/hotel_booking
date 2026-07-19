@@ -28,7 +28,9 @@ function SignInForm() {
 
   // Show error from NextAuth redirect (e.g., ?error=CredentialsSignin)
   const urlError = searchParams.get("error");
-  const displayError = error || (urlError ? errorMessages[urlError] || errorMessages.Default : null);
+  const displayError =
+    error ||
+    (urlError ? errorMessages[urlError] || errorMessages.Default : null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +45,7 @@ function SignInForm() {
       });
 
       if (result?.error) {
-        const message =
-          errorMessages[result.error] || errorMessages.Default;
+        const message = errorMessages[result.error] || errorMessages.Default;
         setError(message);
       } else {
         router.push("/");
@@ -67,11 +68,15 @@ function SignInForm() {
           </p>
         </div>
 
+        {/* Demo Admin Credentials */}
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             {displayError && (
               <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
-                <p className="text-sm text-destructive text-center">{displayError}</p>
+                <p className="text-sm text-destructive text-center">
+                  {displayError}
+                </p>
               </div>
             )}
 

@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,8 +21,6 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-
     try {
       const res = await fetch("/api/register", {
         method: "POST",
@@ -24,9 +28,9 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: formData.get("name"),
-          email: formData.get("email"),
-          password: formData.get("password"),
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
         }),
       });
 
@@ -56,17 +60,25 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             {error && (
-              <p className="text-destructive text-sm text-center">{error}</p>
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+                <p className="text-sm text-destructive text-center">{error}</p>
+              </div>
             )}
+
             <div>
               <label htmlFor="name" className="block text-sm font-medium">
                 Full name
               </label>
               <Input
                 id="name"
-                name="name"
                 type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
+                disabled={loading}
+                placeholder="John Doe"
               />
             </div>
             <div>
@@ -75,9 +87,14 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="email"
-                name="email"
                 type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
+                disabled={loading}
+                placeholder="you@example.com"
               />
             </div>
             <div>
@@ -86,9 +103,14 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="password"
-                name="password"
                 type="password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
+                disabled={loading}
+                placeholder="••••••••"
               />
             </div>
           </div>
@@ -123,6 +145,13 @@ export default function RegisterPage() {
               Sign in
             </Button>
           </div>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/auth/login" className="text-primary hover:underline">
+              Log in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
