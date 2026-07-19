@@ -20,8 +20,8 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: "admin@hotelbooking.com",
+    password: "admin123",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
