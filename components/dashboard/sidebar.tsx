@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuLayoutDashboard, LuImage } from "react-icons/lu";
+import { LuLayoutDashboard, LuImage, LuUser } from "react-icons/lu";
 import { BsBuildings } from "react-icons/bs";
 import { IoBedOutline } from "react-icons/io5";
 import { TbWorld } from "react-icons/tb";
@@ -45,6 +45,11 @@ export const routes = [
     label: "Banner Settings",
     icon: LuImage,
     href: "/dashboard/banner",
+  },
+  {
+    label: "Profile",
+    icon: LuUser,
+    href: "/dashboard/profile",
   },
 ];
 

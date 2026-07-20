@@ -41,6 +41,8 @@ model User {
   password      String?
   emailVerified DateTime?
   image         String?
+  phoneNumber   String?
+  address       String?
   role          Role           @default(USER)
   accounts      Account[]
   bookings      Booking[]

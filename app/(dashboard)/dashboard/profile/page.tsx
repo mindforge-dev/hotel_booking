@@ -69,7 +69,7 @@ const profileSchema = z
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-export default function ProfilePage() {
+export default function AdminProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateMutation = useUpdateProfile();
   const { toast } = useToast();
@@ -153,9 +153,9 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold">Admin Profile & Settings</h1>
         <p className="text-muted-foreground">
-          Manage your personal information and account settings.
+          Manage your administrator details and security options.
         </p>
       </div>
 
@@ -170,7 +170,7 @@ export default function ProfilePage() {
             <Avatar className="h-20 w-20">
               <AvatarImage src={profile?.image || undefined} />
               <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                {profile?.name?.charAt(0)?.toUpperCase() || "U"}
+                {profile?.name?.charAt(0)?.toUpperCase() || "A"}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -179,9 +179,9 @@ export default function ProfilePage() {
               </h3>
               <p className="text-sm text-muted-foreground">{profile?.email}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="destructive" className="text-xs bg-red-600 hover:bg-red-700">
                   <Shield className="h-3 w-3 mr-1" />
-                  {profile?.role || "USER"}
+                  {profile?.role || "ADMIN"}
                 </Badge>
               </div>
             </div>
@@ -347,35 +347,6 @@ export default function ProfilePage() {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Account Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-accent/50 rounded-lg">
-              <p className="text-2xl font-bold">
-                {profile?._count?.bookings || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">Bookings</p>
-            </div>
-            <div className="text-center p-4 bg-accent/50 rounded-lg">
-              <p className="text-2xl font-bold">
-                {profile?._count?.favorites || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">Favorites</p>
-            </div>
-            <div className="text-center p-4 bg-accent/50 rounded-lg">
-              <p className="text-2xl font-bold">
-                {profile?.loyaltyPoints || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">Points</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

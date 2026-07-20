@@ -7,6 +7,8 @@ interface UserProfile {
   email: string | null;
   image: string | null;
   role: string;
+  phoneNumber: string | null;
+  address: string | null;
   createdAt: string;
   loyaltyPoints: number;
   _count: {
@@ -31,7 +33,15 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (profileData: { name?: string; email?: string; image?: string }) => {
+    mutationFn: async (profileData: {
+      name?: string;
+      email?: string;
+      image?: string;
+      phoneNumber?: string;
+      address?: string;
+      currentPassword?: string;
+      newPassword?: string;
+    }) => {
       const { data } = await axios.patch("/api/user/profile", profileData);
       return data;
     },

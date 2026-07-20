@@ -136,6 +136,13 @@ export default function Navbar() {
                       Dashboard
                     </Link>
                     <Link
+                      href={session?.user?.role === "ADMIN" ? "/dashboard/profile" : "/user/profile"}
+                      className="block px-4 py-2 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <Link
                       href="/settings"
                       className="block px-4 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={() => setProfileOpen(false)}
