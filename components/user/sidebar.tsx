@@ -56,6 +56,7 @@ export function UserSidebar() {
       <div className="flex flex-col flex-1 gap-y-1">
         {routes.map((route) => {
           const isActive = pathname === route.href || (route.href !== "/user/dashboard" && pathname.startsWith(route.href));
+          const Icon = route.icon as React.ComponentType<any>;
           return (
             <Link
               key={route.href}
@@ -69,7 +70,7 @@ export function UserSidebar() {
                 }
               `}
             >
-              <route.icon className="h-5 w-5 flex-shrink-0" />
+              <Icon className="h-5 w-5 flex-shrink-0" />
               {route.label}
             </Link>
           );

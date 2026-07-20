@@ -11,6 +11,20 @@ import axios from "axios"
 import { useQuery } from "@tanstack/react-query"
 
 export default function HomePage() {
+  // Fetch banner settings
+  const { data: banner } = useQuery({
+    queryKey: ['homeBanner'],
+    queryFn: async () => {
+      try {
+        const response = await axios.get('/api/banner')
+        return response.data
+      } catch (error) {
+        console.error('Error fetching banner:', error)
+        return null;
+      }
+    }
+  })
+
   // Fetch featured hotels
   const { data: featuredHotels, isLoading: featureHotelLoading } = useQuery({
     queryKey: ['featuredHotels'],
@@ -41,10 +55,10 @@ export default function HomePage() {
 
   return (
     <main>
-      {/* Hero Section (unchanged) */}
+      {/* Hero Section */}
       <div className="relative h-[600px]">
         <Image
-          src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop"
+          src={banner?.imageUrl || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop"}
           alt="Luxury Hotel"
           fill
           priority
@@ -52,10 +66,10 @@ export default function HomePage() {
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
           <h1 className="text-4xl md:text-6xl font-bold text-center max-w-3xl">
-            Find Your Perfect Stay Whatever
+            {banner?.title || "Find Your Perfect Stay Whatever"}
           </h1>
           <p className="mt-4 text-xl text-center max-w-2xl">
-            Discover handpicked hotels for your next adventure
+            {banner?.subtitle || "Discover handpicked hotels for your next adventure"}
           </p>
           <Link href="/search">
             <Button size="lg" className="mt-8">
@@ -65,6 +79,7 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+
 
       {/* Featured Hotels with Skeleton Loading */}
       <section className="container mx-auto py-16 px-4">

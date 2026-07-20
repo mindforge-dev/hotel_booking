@@ -1,13 +1,19 @@
 import { v2 as cloudinary } from 'cloudinary';
+import sharp from 'sharp';
+
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+export interface ResizeOptions {
+    width?: number;
+    height?: number;
+    fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+}
 
-
-export async function uploadToCloudinary(file: any): Promise<string> {
+export async function uploadToCloudinary(file: any, resizeOptions?: ResizeOptions): Promise<string> {
     try {
         // Helper function to create upload promise
         const uploadToCloudinaryHelper = (buffer: Buffer): Promise<string> => {
@@ -51,6 +57,23 @@ export async function uploadToCloudinary(file: any): Promise<string> {
         } else {
             console.error('Unhandled file type:', typeof file, file);
             throw new Error('Unsupported file format');
+        }
+
+        // Resize image if resize options are provided
+        if (resizeOptions && (resizeOptions.width || resizeOptions.height)) {
+            try {
+                let sharpInstance = sharp(buffer);
+                sharpInstance = sharpInstance.resize({
+                    width: resizeOptions.width,
+                    height: resizeOptions.height,
+                    fit: resizeOptions.fit || 'cover',
+                    position: 'center',
+                    withoutEnlargement: true
+                });
+                buffer = await sharpInstance.toBuffer();
+            } catch (err) {
+                console.error('Sharp image resizing failed, uploading original image instead:', err);
+            }
         }
 
         return await uploadToCloudinaryHelper(buffer);

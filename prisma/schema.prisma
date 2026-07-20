@@ -250,3 +250,13 @@ enum NotificationStatus {
   ACCEPTED
   REJECTED
 }
+
+model HomeBanner {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  title     String
+  subtitle  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

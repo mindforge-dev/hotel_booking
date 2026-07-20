@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuLayoutDashboard } from "react-icons/lu";
+import { LuLayoutDashboard, LuImage } from "react-icons/lu";
 import { BsBuildings } from "react-icons/bs";
 import { IoBedOutline } from "react-icons/io5";
 import { TbWorld } from "react-icons/tb";
@@ -41,6 +41,11 @@ export const routes = [
     icon: FaCalendarCheck,
     href: "/dashboard/bookings",
   },
+  {
+    label: "Banner Settings",
+    icon: LuImage,
+    href: "/dashboard/banner",
+  },
 ];
 
 // Sidebar component
@@ -50,21 +55,24 @@ export function Sidebar() {
   return (
     <div className="h-full w-64 flex flex-col bg-background p-4 overflow-x-hidden border-r border-border">
       <div className="flex flex-col flex-1 gap-y-4">
-        {routes.map((route) => (
-          <Link
-            key={route.href}
-            href={route.href}
-            className={`
-              flex items-center gap-x-2 text-sm font-medium p-3
-              hover:bg-accent hover:text-accent-foreground rounded-lg
-              transition-colors
-              ${pathname === route.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"}
-            `}
-          >
-            <route.icon className="h-5 w-5" />
-            {route.label}
-          </Link>
-        ))}
+        {routes.map((route) => {
+          const Icon = route.icon as React.ComponentType<any>;
+          return (
+            <Link
+              key={route.href}
+              href={route.href}
+              className={`
+                flex items-center gap-x-2 text-sm font-medium p-3
+                hover:bg-accent hover:text-accent-foreground rounded-lg
+                transition-colors
+                ${pathname === route.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"}
+              `}
+            >
+              <Icon className="h-5 w-5" />
+              {route.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
