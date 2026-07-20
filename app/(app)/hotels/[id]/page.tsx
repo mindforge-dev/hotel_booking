@@ -202,16 +202,23 @@ export default function HotelDetailPage({
                     </div>
                   </div>
 
-                  {status === "authenticated" && (
-                    <div className="mt-4 md:mt-0 md:self-end">
+                  <div className="mt-4 md:mt-0 flex gap-2 md:self-end w-full md:w-auto">
+                    <Button
+                      variant="outline"
+                      className="flex-1 md:flex-initial"
+                      onClick={() => router.push(`/hotels/${id}/${room.id}`)}
+                    >
+                      View Details
+                    </Button>
+                    {status === "authenticated" && (
                       <Button
-                        className="w-full md:w-auto"
+                        className="flex-1 md:flex-initial"
                         onClick={() => handleBookRoom(room)}
                       >
                         Book Now
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
